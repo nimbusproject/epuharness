@@ -72,18 +72,22 @@ class EPUHarness(object):
 
         self.process_dispatchers = deployment.get('process-dispatchers', {})
         for pd_name, pd in self.process_dispatchers.iteritems():
-            self._start_process_dispatcher(pd_name, pd.get('engines', {}))
+            self._start_process_dispatcher(pd_name, pd.get('engines', {}), 
+                logfile=pd.get('logfile'))
 
         nodes = deployment.get('nodes', {})
         for node_name, node in nodes.iteritems():
 
-            self.announce_node(node_name, node.get('dt', ''))
+            self.announce_node(node_name, node.get('dt', ''),
+                    node.get('process-dispatcher', ''))
 
             for eeagent_name, eeagent in node.get('eeagents', {}).iteritems():
-                self._start_eeagent(eeagent_name, eeagent['process-dispatcher'])
+                dispatcher = eeagent.get('process-dispatcher') or \
+                    node.get('process-dispatcher', '')
+                self._start_eeagent(eeagent_name, dispatcher, eeagent.get('logfile'))
 
         
-    def _start_process_dispatcher(self, name, engines,
+    def _start_process_dispatcher(self, name, engines, logfile=None,
             exe_name="epu-processdispatcher-service"):
         """Starts a process dispatcher with SupervisorD
 
@@ -96,7 +100,7 @@ class EPUHarness(object):
         log.info("Starting Process Dispatcher '%s'" % name)
 
         config_file = self._build_process_dispatcher_config(self.exchange,
-                name, engines)
+                name, engines, logfile=logfile)
 
         cmd = "%s %s" % (exe_name, config_file)
         log.debug("Running command '%s'" % cmd)
@@ -106,7 +110,7 @@ class EPUHarness(object):
 
 
     def _build_process_dispatcher_config(self, exchange, name, engines,
-            log_file=None):
+            logfile=None):
         """Builds a yaml config file to feed to the process dispatcher
 
         @param exchange: the AMQP exchange the service should be on
@@ -114,10 +118,10 @@ class EPUHarness(object):
                 addressed on AMQP
         @param engines: a dictionary of eeagent configs. Same format as the     
                 Process Dispatcher config file
-        @param log_file: the log file for the Process Dispatcher
+        @param logfile: the log file for the Process Dispatcher
         """
-        if not log_file:
-            log_file = "/tmp/pd.log"
+        if not logfile:
+            logfile = "/dev/null"
 
         config = {
           'dashi': {
@@ -135,7 +139,7 @@ class EPUHarness(object):
             },
             'handlers': {
               'file': {
-                'filename': log_file,
+                'filename': logfile,
               }
             },
             'root': {
@@ -152,23 +156,26 @@ class EPUHarness(object):
 
         return config_filename
 
-    def _start_eeagent(self, name, process_dispatcher, exe_name="eeagent"):
+    def _start_eeagent(self, name, process_dispatcher, logfile=None,
+            exe_name="eeagent"):
         """Starts an eeagent with SupervisorD
 
         @param name: Name of process dispatcher to start
         @param process_dispatcher: The name of the parent Process Dispatcher to
                 connect to
+        @param logfile: the log file for the eeagent
         @param exe_name: the name of the eeagent executable
         """
         log.info("Starting EEAgent '%s'" % name)
 
-        config_file = self._build_eeagent_config(self.exchange, name, process_dispatcher)
+        config_file = self._build_eeagent_config(self.exchange, name,
+                process_dispatcher, logfile=logfile)
         cmd = "%s %s" % (exe_name, config_file)
         pid = self.factory.get_pidantic(command=cmd, process_name=name,
                 directory=self.pidantic_dir)
         pid.start()
 
-    def _build_eeagent_config(self, exchange, name, process_dispatcher, log_file=None):
+    def _build_eeagent_config(self, exchange, name, process_dispatcher, logfile=None):
         """Builds a yaml config file to feed to the eeagent
 
         @param exchange: the AMQP exchange the service should be on
@@ -176,10 +183,10 @@ class EPUHarness(object):
                 on AMQP
         @param process_dispatcher: the name of the parent Process Dispatcher to 
                 connect to          
-        @param log_file: the log file for the eeagent
+        @param logfile: the log file for the eeagent
         """
-        if not log_file:
-            log_file="/tmp/pd.log"
+        if not logfile:
+            logfile="/dev/null"
 
         config = {
           'dashi': {
@@ -199,7 +206,7 @@ class EPUHarness(object):
             },
             'handlers': {
               'file': {
-                'filename': log_file,
+                'filename': logfile,
               }
             }
           }
@@ -214,26 +221,27 @@ class EPUHarness(object):
         return config_filename
 
 
-    def announce_node(self, node_name, deployable_type):
+    def announce_node(self, node_name, deployable_type, process_dispatcher,
+            state=None):
         """Announce a node to each process dispatcher.
-        TODO: This should only announce to one PD
 
         @param node_name: the name of the node to advertise
         @param deployable_type: the deployable type of the node
+        @param process_dispatcher: the pd to announce to
+        @param state: the state to advertise to the pd
         """
-        state = InstanceState.RUNNING
+        if not state:
+          state = InstanceState.RUNNING
 
-        log.info("Announcing node '%s'" % node_name)
-
-        for pd_name, pd in self.process_dispatchers.iteritems():
-            pd_client = ProcessDispatcherClient(self.dashi, pd_name)
-            log.debug("Announcing %s of type %s is '%s' to %s" % (node_name, deployable_type, state, pd_name))
+        pd_client = ProcessDispatcherClient(self.dashi, process_dispatcher)
+        log.info("Announcing %s of type %s is '%s' to %s" % (node_name,
+            deployable_type, state, process_dispatcher))
             
-            for i in range(1, ADVERTISE_RETRIES):
-                try:
-                    pd_client.dt_state(node_name, deployable_type, state)
-                    break
-                except timeout:
-                    wait_time = i*i # Exponentially increasing wait
-                    log.warning("PD not available yet. Waiting %ss" % wait_time)
-                    time.sleep(i*i)
+        for i in range(1, ADVERTISE_RETRIES):
+            try:
+                pd_client.dt_state(node_name, deployable_type, state)
+                break
+            except timeout:
+                wait_time = i*i # Exponentially increasing wait
+                log.warning("PD not available yet. Waiting %ss" % wait_time)
+                time.sleep(i*i)

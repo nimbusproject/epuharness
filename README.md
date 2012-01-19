@@ -16,6 +16,7 @@ configuration. The default configuration is as follows:
 
     process-dispatchers:
       pd_0:
+        logfile: /tmp/pd_0.log
         engines:
           default:
             deployable_type: eeagent
@@ -24,15 +25,16 @@ configuration. The default configuration is as follows:
     nodes:
       nodeone:
         dt: eeagent
+        process-dispatcher: pd_0
         eeagents:
           eeagent_nodeone:
-            process-dispatcher: pd_0
+            logfile: /tmp/eeagent_nodeone.log
 
 If you want two nodes, for example, your configuration file would look like:
 
-
     process-dispatchers:
       pd_0:
+        logfile: /tmp/pd_0.log
         engines:
           default:
             deployable_type: eeagent
@@ -41,14 +43,17 @@ If you want two nodes, for example, your configuration file would look like:
     nodes:
       nodeone:
         dt: eeagent
+        process-dispatcher: pd_0
         eeagents:
           eeagent_nodeone:
-            process-dispatcher: pd_0
+            logfile: /tmp/eeagent_nodeone.log
       nodetwo:
         dt: eeagent
+        process-dispatcher: pd_0
         eeagents:
           eeagent_nodetwo:
-            process-dispatcher: pd_0
+            logfile: /tmp/eeagent_nodetwo.log
+
 
 To use the profile, save it to a yml file, and launch it like so:
 

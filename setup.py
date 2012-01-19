@@ -49,6 +49,7 @@ if sys.version_info < (2, 6, 0):
 setupdict['install_requires'] += ['pyyaml',
                                   'dashi==0.1',
                                   'gevent==0.13.6',
+                                  'pidantic',
                                   'nose',
                                  ]
 setupdict['tests_require'] = ['nose']

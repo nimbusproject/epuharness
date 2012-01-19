@@ -5,6 +5,7 @@ from exceptions import *
 DEFAULT_DEPLOYMENT = """---
 process-dispatchers:
   pd_0:
+    logfile: /tmp/pd_0.log
     engines:
       default:
         deployable_type: eeagent
@@ -13,9 +14,10 @@ process-dispatchers:
 nodes:
   nodeone:
     dt: eeagent
+    process-dispatcher: pd_0
     eeagents:
       eeagent_nodeone:
-        process-dispatcher: pd_0
+        logfile: /tmp/eeagent_nodeone.log
 """
 
 
