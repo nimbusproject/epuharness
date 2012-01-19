@@ -14,16 +14,13 @@ from epu.dashiproc.processdispatcher import ProcessDispatcherClient
 from util import get_config_paths
 from deployment import parse_deployment, DEFAULT_DEPLOYMENT
 
-logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger(__name__)
-
 ADVERTISE_RETRIES = 10
 
 class EPUHarness(object):
     """EPUHarness. Sets up Process Dispatchers and EEAgents for testing.
     """
     #TODO: add frameowrk for pyon messaging
-
 
     def __init__(self, exchange=None, pidantic_dir=None):
 
@@ -42,7 +39,8 @@ class EPUHarness(object):
         except OSError:
             pass
 
-        self.factory = SupDPidanticFactory(directory=self.pidantic_dir, name="epu-harness")
+        self.factory = SupDPidanticFactory(directory=self.pidantic_dir,
+                name="epu-harness")
 
     def stop(self, force=False):
         """Stop services that were previously started by epuharness
@@ -52,7 +50,7 @@ class EPUHarness(object):
         """
         instances = self.factory.reload_instances()
         if instances:
-            log.debug("Killing %s" % ", ".join(instances.keys()))
+            log.info("Stopping %s" % ", ".join(instances.keys()))
         for instance in instances.values():
             instance.cleanup()
         self.factory.terminate()
@@ -74,17 +72,15 @@ class EPUHarness(object):
 
         self.process_dispatchers = deployment.get('process-dispatchers', {})
         for pd_name, pd in self.process_dispatchers.iteritems():
-            log.debug("STARTING PD")
             self._start_process_dispatcher(pd_name, pd.get('engines', {}))
-
 
         nodes = deployment.get('nodes', {})
         for node_name, node in nodes.iteritems():
 
             self.announce_node(node_name, node.get('dt', ''))
 
-            for eeagent in node.get('eeagents', []):
-                self._start_eeagent(eeagent['name'], eeagent['process-dispatcher'])
+            for eeagent_name, eeagent in node.get('eeagents', {}).iteritems():
+                self._start_eeagent(eeagent_name, eeagent['process-dispatcher'])
 
         
     def _start_process_dispatcher(self, name, engines,
@@ -97,11 +93,13 @@ class EPUHarness(object):
         @param exe_name: the name of the process dispatcher executable
         """
 
+        log.info("Starting Process Dispatcher '%s'" % name)
+
         config_file = self._build_process_dispatcher_config(self.exchange,
                 name, engines)
 
         cmd = "%s %s" % (exe_name, config_file)
-        log.debug(cmd)
+        log.debug("Running command '%s'" % cmd)
         pid = self.factory.get_pidantic(command=cmd, process_name=name,
                 directory=self.pidantic_dir)
         pid.start()
@@ -162,6 +160,7 @@ class EPUHarness(object):
                 connect to
         @param exe_name: the name of the eeagent executable
         """
+        log.info("Starting EEAgent '%s'" % name)
 
         config_file = self._build_eeagent_config(self.exchange, name, process_dispatcher)
         cmd = "%s %s" % (exe_name, config_file)
@@ -224,11 +223,13 @@ class EPUHarness(object):
         """
         state = InstanceState.RUNNING
 
+        log.info("Announcing node '%s'" % node_name)
+
         for pd_name, pd in self.process_dispatchers.iteritems():
             pd_client = ProcessDispatcherClient(self.dashi, pd_name)
             log.debug("Announcing %s of type %s is '%s' to %s" % (node_name, deployable_type, state, pd_name))
             
-            for i in range(0, ADVERTISE_RETRIES):
+            for i in range(1, ADVERTISE_RETRIES):
                 try:
                     pd_client.dt_state(node_name, deployable_type, state)
                     break

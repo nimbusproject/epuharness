@@ -14,7 +14,7 @@ nodes:
   nodeone:
     dt: eeagent
     eeagents:
-      - name: eeagent_nodeone
+      eeagent_nodeone:
         process-dispatcher: pd_0
 """
 
