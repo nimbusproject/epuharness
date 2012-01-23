@@ -14,7 +14,6 @@ ERROR_RETURN = 1
 
 def main(argv=None):
 
-    epuharness = EPUHarness()
 
     if not argv:
         argv = list(sys.argv)
@@ -28,6 +27,8 @@ def main(argv=None):
     parser.add_argument('config.yml', help='deployment config file',
             default=[], nargs='?')
     args = parser.parse_args(argv)
+
+    epuharness = EPUHarness(exchange=args.exchange)
 
     action = args.action.lower()
     if action == 'start':
