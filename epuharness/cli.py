@@ -1,34 +1,16 @@
 import gevent.monkey ; gevent.monkey.patch_all()
 import os
 import sys
+try:
+    import argparse
+except ImportError:
+    #TODO add argparse to setup.py for pre 2.7
+    print "Couldn't import argparse. Use Python 2.7"
+
 
 from harness import EPUHarness
 
 ERROR_RETURN = 1
-
-def usage(stdout=False):
-    """Print usage information. Should normally print to stderr, except when
-    called by --help, in which case it should print to stdout for pagers.
-    """
-
-    cli_name = os.path.basename(sys.argv[0])
-    usage = """%s
-
-usage:
-   %s --help
-   %s start [scheme1.yml]
-   %s stop [--force]
-""" % (cli_name, cli_name, cli_name, cli_name)
-
-    if stdout:
-        print usage
-    else:
-        print >> sys.stderr, usage
-
-def normalize_arg(arg):
-    arg = arg.lstrip('-')
-    arg = arg.lower()
-    return arg
 
 def main(argv=None):
 
@@ -36,35 +18,28 @@ def main(argv=None):
 
     if not argv:
         argv = list(sys.argv)
+    command = argv.pop(0)
 
-    action = ""
-    try:
-        appname = argv.pop(0)
-        action = argv.pop(0)
-    except IndexError:
-        usage()
-        sys.exit(ERROR_RETURN)
+    parser = argparse.ArgumentParser("Start EPU Services Locally")
+    parser.add_argument('-f', '--force', action='store_true')
+    parser.add_argument('-x', '--exchange', metavar='EXCHANGE_NAME',
+            default=None)
+    parser.add_argument('action', metavar='ACTION', help='start or stop')
+    parser.add_argument('config.yml', help='deployment config file',
+            default=[], nargs='?')
+    args = parser.parse_args(argv)
 
-    action = normalize_arg(action)
-
-    if action == 'help':
-        usage(stdout=True)
-    elif action == 'start':
+    action = args.action.lower()
+    if action == 'start':
         try:
-            deployment_file = argv.pop(0)
+            configs = getattr(args, 'config.yml')
+            deployment_file = configs[0]
         except IndexError:
             deployment_file = None
+        
         epuharness.start(deployment_file)
     elif action == 'stop':
-        force = False
-        try:
-            stoparg = argv.pop(0)
-            stoparg = normalize_arg(stoparg)
-            if stoparg == 'force':
-                force = True
-        except IndexError:
-            pass
-
+        force = args.force
         epuharness.stop(force=force)
     else:
         usage()
