@@ -29,8 +29,8 @@ class EPUHarness(object):
         self.CFG = bootstrap.configure(config_files)
 
         self.pidantic_dir = pidantic_dir or self.CFG.epuharness.pidantic_dir
-        self.exchange = exchange or self.CFG.dashi.get('exchange', None) or str(uuid.uuid4())
-        self.CFG.dashi.exchange = self.exchange
+        self.exchange = exchange or self.CFG.server.amqp.get('exchange', None) or str(uuid.uuid4())
+        self.CFG.server.amqp.exchange = self.exchange
         self.dashi = bootstrap.dashi_connect(self.CFG.dashi.topic, self.CFG)
         self.process_dispatchers = []
 
@@ -124,8 +124,10 @@ class EPUHarness(object):
             logfile = "/dev/null"
 
         config = {
-          'dashi': {
-            'exchange': exchange,
+          'server': {
+            'amqp': {
+              'exchange': exchange,
+            }
           },
           'processdispatcher': {
             'topic': name,
@@ -189,8 +191,10 @@ class EPUHarness(object):
             logfile="/dev/null"
 
         config = {
-          'dashi': {
-            'exchange': exchange,
+          'server': {
+            'amqp': {
+              'exchange': exchange,
+            }
           },
           'eeagent': {
             'name': name,
