@@ -33,11 +33,19 @@ def main(argv=None):
     action = args.action.lower()
     if action == 'start':
         try:
-            configs = getattr(args, 'config.yml')
-            deployment_file = configs[0]
-        except IndexError:
+            config = getattr(args, 'config.yml')
+            if config.endswith('.yml') or config.endswith('.json'):
+                deployment_file = config
+            else:
+                config = config[0]
+                if config.endswith('.yml') or config.endswith('.json'):
+                    deployment_file = config
+                else:
+                    print >>sys.stderr, "Your configuration file isn't recognized"
+                    sys.exit(ERROR_RETURN)
+        except AttributeError:
             deployment_file = None
-        
+
         epuharness.start(deployment_file)
     elif action == 'stop':
         force = args.force
