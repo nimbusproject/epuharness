@@ -13,6 +13,7 @@ from epu.dashiproc.processdispatcher import ProcessDispatcherClient
 
 from util import get_config_paths
 from deployment import parse_deployment, DEFAULT_DEPLOYMENT
+from exceptions import DeploymentDescriptionError
 
 log = logging.getLogger(__name__)
 ADVERTISE_RETRIES = 10
@@ -20,7 +21,7 @@ ADVERTISE_RETRIES = 10
 class EPUHarness(object):
     """EPUHarness. Sets up Process Dispatchers and EEAgents for testing.
     """
-    #TODO: add frameowrk for pyon messaging
+    #TODO: add framework for pyon messaging
 
     def __init__(self, exchange=None, pidantic_dir=None):
 
@@ -78,8 +79,13 @@ class EPUHarness(object):
         nodes = deployment.get('nodes', {})
         for node_name, node in nodes.iteritems():
 
+            if not node.has_key('process-dispatcher'):
+                msg = "No process-dispatcher specified for node '%s'" % (
+                    node_name)
+                raise DeploymentDescriptionError(msg)
+
             self.announce_node(node_name, node.get('dt', ''),
-                    node.get('process-dispatcher', ''))
+                    node['process-dispatcher'])
 
             for eeagent_name, eeagent in node.get('eeagents', {}).iteritems():
                 dispatcher = eeagent.get('process-dispatcher') or \
@@ -247,5 +253,5 @@ class EPUHarness(object):
                 break
             except timeout:
                 wait_time = i*i # Exponentially increasing wait
-                log.warning("PD not available yet. Waiting %ss" % wait_time)
-                time.sleep(i*i)
+                log.warning("PD '%s' not available yet. Waiting %ss" % (process_dispatcher, wait_time))
+                time.sleep(2**i)
