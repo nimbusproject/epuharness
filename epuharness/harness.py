@@ -219,6 +219,7 @@ class EPUHarness(object):
           'logging': {
             'loggers': {
               'eeagent': {
+                'level': 'DEBUG',
                 'handlers': ['file', 'console']
               }
             },
