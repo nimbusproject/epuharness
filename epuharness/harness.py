@@ -53,6 +53,14 @@ class EPUHarness(object):
         if instances:
             log.info("Stopping %s" % ", ".join(instances.keys()))
         for instance in instances.values():
+            try:
+                # Clean up config files
+                command = instance._program_object.command
+                command = command.split()
+                [os.remove(config) for config in command if config.endswith('.yml')]
+            except e:
+                # Perhaps instance internals have changed
+                log.warning("Couldn't delete temporary config files: %s" % e)
             instance.cleanup()
         self.factory.terminate()
 
