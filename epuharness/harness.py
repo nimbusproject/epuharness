@@ -1,4 +1,5 @@
 import os
+import sys
 import uuid
 import time
 import yaml
@@ -8,6 +9,7 @@ import dashi.bootstrap as bootstrap
 
 from socket import timeout
 from pidantic.supd.pidsupd import SupDPidanticFactory
+from pidantic.state_machine import PIDanticState
 from epu.states import InstanceState
 from epu.dashiproc.processdispatcher import ProcessDispatcherClient
 
@@ -42,6 +44,21 @@ class EPUHarness(object):
 
         self.factory = SupDPidanticFactory(directory=self.pidantic_dir,
                 name="epu-harness")
+
+    def status(self):
+        """Get status of services that were previously started by epuharness
+        """
+
+        instances = self.factory.reload_instances()
+        self.factory.poll()
+        return_code = 0
+        for name, instance in instances.iteritems():
+            state = instance.get_state()
+            if state != PIDanticState.STATE_RUNNING:
+                return_code = 1
+
+            print "%s is %s" % (name, instance.get_state())
+        sys.exit(return_code)
 
     def stop(self, force=False):
         """Stop services that were previously started by epuharness
@@ -222,6 +239,9 @@ class EPUHarness(object):
                 'level': 'DEBUG',
                 'handlers': ['file', 'console']
               }
+            },
+            'root': {
+              'handlers': ['file', 'console']
             },
             'handlers': {
               'file': {

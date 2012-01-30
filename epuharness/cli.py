@@ -50,6 +50,8 @@ def main(argv=None):
     elif action == 'stop':
         force = args.force
         epuharness.stop(force=force)
+    elif action == 'status':
+        epuharness.status()
     else:
         usage()
         sys.exit(ERROR_RETURN)
