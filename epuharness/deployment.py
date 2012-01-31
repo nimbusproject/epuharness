@@ -17,6 +17,7 @@ nodes:
     process-dispatcher: pd_0
     eeagents:
       eeagent_nodeone:
+        launch_type: supd
         logfile: /tmp/eeagent_nodeone.log
 """
 
