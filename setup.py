@@ -52,6 +52,7 @@ setupdict['install_requires'] += ['pyyaml',
                                   'pidantic',
                                   'nose',
                                   'epu==1.2.0',
+                                  'eeagent',
                                  ]
 setupdict['tests_require'] = ['nose']
 setupdict['test_suite'] = 'nose.collector'
