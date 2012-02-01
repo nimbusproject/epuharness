@@ -51,6 +51,7 @@ setupdict['install_requires'] += ['pyyaml',
                                   'gevent==0.13.6',
                                   'pidantic',
                                   'nose',
+                                  'epu==1.2.0',
                                  ]
 setupdict['tests_require'] = ['nose']
 setupdict['test_suite'] = 'nose.collector'
