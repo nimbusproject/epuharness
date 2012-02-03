@@ -118,7 +118,8 @@ class EPUHarness(object):
                 self._start_eeagent(eeagent_name, dispatcher,
                         eeagent['launch_type'], 
                         pyon_directory=eeagent.get('pyon_directory'),
-                        logfile=eeagent.get('logfile'))
+                        logfile=eeagent.get('logfile'),
+                        slots=eeagent.get('slots'))
 
         
     def _start_process_dispatcher(self, name, engines, logfile=None,
@@ -193,7 +194,7 @@ class EPUHarness(object):
         return config_filename
 
     def _start_eeagent(self, name, process_dispatcher, launch_type,
-            pyon_directory=None, logfile=None, exe_name="eeagent"):
+            pyon_directory=None, logfile=None, exe_name="eeagent", slots=None):
         """Starts an eeagent with SupervisorD
 
         @param name: Name of process dispatcher to start
@@ -203,17 +204,19 @@ class EPUHarness(object):
         @param pyon_directory: location of your pyon installation
         @param logfile: the log file for the eeagent
         @param exe_name: the name of the eeagent executable
+        @param slots: the number of slots available for processes
         """
         log.info("Starting EEAgent '%s'" % name)
 
         config_file = self._build_eeagent_config(self.exchange, name,
-                process_dispatcher, launch_type, pyon_directory, logfile=logfile)
+                process_dispatcher, launch_type, pyon_directory,
+                logfile=logfile, slots=slots)
         cmd = "%s %s" % (exe_name, config_file)
         pid = self.factory.get_pidantic(command=cmd, process_name=name,
                 directory=self.pidantic_dir)
         pid.start()
 
-    def _build_eeagent_config(self, exchange, name, process_dispatcher, launch_type, pyon_directory=None, logfile=None, supd_directory=None):
+    def _build_eeagent_config(self, exchange, name, process_dispatcher, launch_type, pyon_directory=None, logfile=None, supd_directory=None, slots=None):
         """Builds a yaml config file to feed to the eeagent
 
         @param exchange: the AMQP exchange the service should be on
@@ -223,6 +226,7 @@ class EPUHarness(object):
                 connect to          
         @param launch_type: launch_type of eeagent (fork, supd, or pyon_single)
         @param logfile: the log file for the eeagent
+        @param slots: the number of slots available for processes
         """
         if not logfile:
             logfile="/dev/null"
@@ -231,6 +235,8 @@ class EPUHarness(object):
         if launch_type.startswith('pyon') and not pyon_directory:
             msg = "EEagents with a pyon launch_type must supply a pyon directory"
             raise DeploymentDescriptionError(msg)
+        if not slots:
+            slots = 8
 
         config = {
           'server': {
@@ -240,6 +246,7 @@ class EPUHarness(object):
           },
           'eeagent': {
             'name': name,
+            'slots': slots,
             'launch_type': {
               'name': launch_type,
               'supd_directory': supd_directory,
