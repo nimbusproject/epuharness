@@ -53,6 +53,7 @@ setupdict['install_requires'] += ['pyyaml',
                                   'nose',
                                   'epu==1.2.0',
                                   'eeagent',
+                                  'ceiclient',
                                  ]
 setupdict['tests_require'] = ['nose']
 setupdict['test_suite'] = 'nose.collector'
