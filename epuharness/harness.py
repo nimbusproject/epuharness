@@ -232,6 +232,10 @@ class EPUHarness(object):
             logfile="/dev/null"
         if not supd_directory:
             supd_directory = '/tmp/SupD'
+        if launch_type.startswith('pyon'):
+            container_args = '--noshell'
+        else:
+            container_args = ''
         if launch_type.startswith('pyon') and not pyon_directory:
             msg = "EEagents with a pyon launch_type must supply a pyon directory"
             raise DeploymentDescriptionError(msg)
@@ -250,6 +254,7 @@ class EPUHarness(object):
             'launch_type': {
               'name': launch_type,
               'supd_directory': supd_directory,
+              'container_args': container_args,
               'pyon_directory': pyon_directory
             },
           },
