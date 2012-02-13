@@ -3,6 +3,7 @@ import sys
 import uuid
 import time
 import yaml
+import shutil
 import logging
 import tempfile
 import dashi.bootstrap as bootstrap 
@@ -57,7 +58,7 @@ class EPUHarness(object):
             if state != PIDanticState.STATE_RUNNING:
                 return_code = 1
 
-            print "%s is %s" % (name, instance.get_state())
+            log.info("%s is %s" % (name, instance.get_state()))
         sys.exit(return_code)
 
     def stop(self, force=False):
@@ -79,7 +80,9 @@ class EPUHarness(object):
                 # Perhaps instance internals have changed
                 log.warning("Couldn't delete temporary config files: %s" % e)
             instance.cleanup()
+
         self.factory.terminate()
+        shutil.rmtree(self.pidantic_dir)
 
     def start(self, deployment_file=None):
         """Start services defined in the deployment file provided. If a
