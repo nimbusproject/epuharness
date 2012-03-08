@@ -26,7 +26,7 @@ class EPUHarness(object):
     """
     #TODO: add framework for pyon messaging
 
-    def __init__(self, exchange=None, pidantic_dir=None):
+    def __init__(self, exchange=None, pidantic_dir=None, amqp_uri=None):
 
         configs = ["epuharness"]
         config_files = get_config_paths(configs)
@@ -35,20 +35,23 @@ class EPUHarness(object):
         self.pidantic_dir = pidantic_dir or self.CFG.epuharness.pidantic_dir
         self.exchange = exchange or self.CFG.server.amqp.get('exchange', None) or str(uuid.uuid4())
         self.CFG.server.amqp.exchange = self.exchange
-        self.dashi = bootstrap.dashi_connect(self.CFG.dashi.topic, self.CFG)
+        self.dashi = bootstrap.dashi_connect(self.CFG.dashi.topic, self.CFG, amqp_uri=amqp_uri)
         self.process_dispatchers = []
 
-        try:
-            os.makedirs(self.pidantic_dir)
-        except OSError:
-            pass
+    def _setup_factory(self):
 
-        self.factory = SupDPidanticFactory(directory=self.pidantic_dir,
-                name="epu-harness")
+        try:
+            self.factory = SupDPidanticFactory(directory=self.pidantic_dir,
+                    name="epu-harness")
+        except:
+            log.exception("Could not connect to supervisord. was epu-harness started?")
+            sys.exit(1)
 
     def status(self):
         """Get status of services that were previously started by epuharness
         """
+
+        self._setup_factory()
 
         instances = self.factory.reload_instances()
         self.factory.poll()
@@ -67,6 +70,8 @@ class EPUHarness(object):
         @param force: When False raises an exception when there is something
                       that can't be killed.
         """
+        self._setup_factory()
+
         instances = self.factory.reload_instances()
         if instances:
             log.info("Stopping %s" % ", ".join(instances.keys()))
@@ -92,6 +97,14 @@ class EPUHarness(object):
         @param deployment_file: The path to a deployment file. Format is in the
                                 README
         """
+
+        try:
+            os.makedirs(self.pidantic_dir)
+        except OSError:
+            log.exception("epu-harness's persistance directory %s is present. Remove it before proceeding" % self.pidantic_dir)
+            sys.exit(1)
+
+        self._setup_factory()
 
         if deployment_file:
             deployment = parse_deployment(yaml_path=deployment_file)
