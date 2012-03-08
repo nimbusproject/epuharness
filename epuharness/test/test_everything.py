@@ -1,3 +1,5 @@
+import shutil
+import tempfile
 from nose.plugins.skip import SkipTest
 from epuharness.harness import EPUHarness
 
@@ -5,7 +7,10 @@ class TestEPUHarness(object):
 
     def setup(self):
 
-        self.epuharness = EPUHarness()
+        self.amqp_uri = "memory://test-epuharness"
+        self.pidantic_dir = tempfile.mkdtemp()
+        self.epuharness = EPUHarness(amqp_uri=self.amqp_uri, pidantic_dir=self.pidantic_dir)
+        self.epuharness._setup_factory()
 
     def test_start_pd(self):
 
@@ -43,3 +48,4 @@ class TestEPUHarness(object):
         for instance in instances.values():
             instance.cleanup()
         self.epuharness.factory.terminate()
+        shutil.rmtree(self.pidantic_dir)
