@@ -229,7 +229,7 @@ class EPUHarness(object):
                 logfile=logfile, slots=slots)
         cmd = "%s %s" % (exe_name, config_file)
         pid = self.factory.get_pidantic(command=cmd, process_name=name,
-                directory=self.pidantic_dir)
+                directory=self.pidantic_dir, autorestart=True)
         pid.start()
 
     def _build_eeagent_config(self, exchange, name, process_dispatcher, launch_type, pyon_directory=None, logfile=None, supd_directory=None, slots=None):
