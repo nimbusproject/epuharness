@@ -24,8 +24,8 @@ def main(argv=None):
     parser.add_argument('-x', '--exchange', metavar='EXCHANGE_NAME',
             default=None)
     parser.add_argument('action', metavar='ACTION', help='start or stop')
-    parser.add_argument('config.yml', help='deployment config file',
-            default=[], nargs='?')
+    parser.add_argument('extras', help='deployment config file for start, or services to stop',
+            default=[], nargs='*')
     args = parser.parse_args(argv)
 
     epuharness = EPUHarness(exchange=args.exchange)
@@ -33,7 +33,7 @@ def main(argv=None):
     action = args.action.lower()
     if action == 'start':
         try:
-            config = getattr(args, 'config.yml')
+            config = getattr(args, 'extras')
             if config.endswith('.yml') or config.endswith('.json'):
                 deployment_file = config
             else:
@@ -48,8 +48,9 @@ def main(argv=None):
 
         epuharness.start(deployment_file)
     elif action == 'stop':
+        services = getattr(args, 'extras')
         force = args.force
-        epuharness.stop(force=force)
+        epuharness.stop(force=force, services=services)
     elif action == 'status':
         epuharness.status()
     else:

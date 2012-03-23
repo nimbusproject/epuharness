@@ -47,7 +47,7 @@ class EPUHarness(object):
             log.exception("Could not connect to supervisord. was epu-harness started?")
             sys.exit(1)
 
-    def status(self):
+    def status(self, exit=True):
         """Get status of services that were previously started by epuharness
         """
 
@@ -56,26 +56,41 @@ class EPUHarness(object):
         instances = self.factory.reload_instances()
         self.factory.poll()
         return_code = 0
+        status = []
         for name, instance in instances.iteritems():
             state = instance.get_state()
+            status.append((name, status))
             if state != PIDanticState.STATE_RUNNING:
                 return_code = 1
 
             log.info("%s is %s" % (name, instance.get_state()))
-        sys.exit(return_code)
+        if exit:
+            sys.exit(return_code)
+        else:
+            return status
 
-    def stop(self, force=False):
+
+    def stop(self, services=None, force=False):
         """Stop services that were previously started by epuharness
 
         @param force: When False raises an exception when there is something
                       that can't be killed.
         """
-        self._setup_factory()
+        cleanup = False
 
+        self._setup_factory()
         instances = self.factory.reload_instances()
-        if instances:
-            log.info("Stopping %s" % ", ".join(instances.keys()))
-        for instance in instances.values():
+
+        # If we're killing everything, perform cleanup
+        if services == instances.keys():
+            cleanup = True
+        elif not services:
+            cleanup = True
+            services = instances.keys()
+
+        log.info("Stopping %s" % ", ".join(services))
+        for service in services:
+            instance = instances[service]
             try:
                 # Clean up config files
                 command = instance._program_object.command
@@ -86,14 +101,16 @@ class EPUHarness(object):
                 log.warning("Couldn't delete temporary config files: %s" % e)
             instance.cleanup()
 
-        self.factory.terminate()
-        shutil.rmtree(self.pidantic_dir)
+        if cleanup:
+            self.factory.terminate()
+            shutil.rmtree(self.pidantic_dir)
 
-    def start(self, deployment_file=None):
+    def start(self, deployment_file=None, deployment_str=None):
         """Start services defined in the deployment file provided. If a
         deployment file isn't provided, then start a standard set of one 
         Process Dispatcher and one eeagent.
 
+        @param deployment_str: A deployment description in str form
         @param deployment_file: The path to a deployment file. Format is in the
                                 README
         """
@@ -106,7 +123,9 @@ class EPUHarness(object):
 
         self._setup_factory()
 
-        if deployment_file:
+        if deployment_str:
+            deployment = parse_deployment(yaml_str=deployment_str)
+        elif deployment_file:
             deployment = parse_deployment(yaml_path=deployment_file)
         else:
             deployment = parse_deployment(yaml_str=DEFAULT_DEPLOYMENT)
