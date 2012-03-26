@@ -1,6 +1,7 @@
 import gevent.monkey ; gevent.monkey.patch_all()
 import os
 import sys
+import logging
 try:
     import argparse
 except ImportError:
@@ -9,6 +10,9 @@ except ImportError:
 
 
 from harness import EPUHarness
+from exceptions import HarnessException
+
+log = logging.getLogger(__name__)
 
 ERROR_RETURN = 1
 
@@ -32,27 +36,36 @@ def main(argv=None):
 
     action = args.action.lower()
     if action == 'start':
-        try:
-            config = getattr(args, 'extras')
+        configs = args.extras
+        if len(configs) > 0:
+            config = configs[0]
             if config.endswith('.yml') or config.endswith('.json'):
                 deployment_file = config
             else:
-                config = config[0]
-                if config.endswith('.yml') or config.endswith('.json'):
-                    deployment_file = config
-                else:
-                    print >>sys.stderr, "Your configuration file isn't recognized"
-                    sys.exit(ERROR_RETURN)
-        except AttributeError:
+                print >>sys.stderr, "Your configuration file isn't recognized"
+                sys.exit(ERROR_RETURN)
+        else:
             deployment_file = None
 
-        epuharness.start(deployment_file)
+        try:
+            epuharness.start(deployment_file)
+        except HarnessException, e:
+            log.error("Problem starting services: %s" % e.message)
+            sys.exit(ERROR_RETURN)
     elif action == 'stop':
         services = getattr(args, 'extras')
         force = args.force
-        epuharness.stop(force=force, services=services)
+        try:
+            epuharness.stop(force=force, services=services)
+        except HarnessException, e:
+            log.error("Problem stopping services: %s" % e.message)
+            sys.exit(ERROR_RETURN)
     elif action == 'status':
-        epuharness.status()
+        try:
+            epuharness.status()
+        except HarnessException, e:
+            log.error("Problem getting status: %s" % e.message)
+            sys.exit(ERROR_RETURN)
     else:
         usage()
         sys.exit(ERROR_RETURN)

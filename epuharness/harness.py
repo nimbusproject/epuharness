@@ -16,7 +16,7 @@ from epu.dashiproc.processdispatcher import ProcessDispatcherClient
 
 from util import get_config_paths
 from deployment import parse_deployment, DEFAULT_DEPLOYMENT
-from exceptions import DeploymentDescriptionError
+from exceptions import DeploymentDescriptionError, HarnessException
 
 log = logging.getLogger(__name__)
 ADVERTISE_RETRIES = 10
@@ -44,8 +44,8 @@ class EPUHarness(object):
             self.factory = SupDPidanticFactory(directory=self.pidantic_dir,
                     name="epu-harness")
         except:
-            log.exception("Could not connect to supervisord. was epu-harness started?")
-            sys.exit(1)
+            log.debug("Problem Connecting to SupervisorD", exc_info=True)
+            raise HarnessException("Could not connect to supervisord. was epu-harness started?")
 
     def status(self, exit=True):
         """Get status of services that were previously started by epuharness
@@ -118,8 +118,8 @@ class EPUHarness(object):
         try:
             os.makedirs(self.pidantic_dir)
         except OSError:
-            log.exception("epu-harness's persistance directory %s is present. Remove it before proceeding" % self.pidantic_dir)
-            sys.exit(1)
+            log.debug("Problem making pidantic dir", exc_info=True)
+            raise HarnessException("epu-harness's persistance directory %s is present. Remove it before proceeding" % self.pidantic_dir)
 
         self._setup_factory()
 
@@ -154,7 +154,8 @@ class EPUHarness(object):
                         eeagent['launch_type'], 
                         pyon_directory=eeagent.get('pyon_directory'),
                         logfile=eeagent.get('logfile'),
-                        slots=eeagent.get('slots'))
+                        slots=eeagent.get('slots'),
+                        supd_directory=os.path.join(self.pidantic_dir, eeagent_name))
 
         
     def _start_process_dispatcher(self, name, engines, logfile=None,
@@ -180,7 +181,7 @@ class EPUHarness(object):
 
 
     def _build_process_dispatcher_config(self, exchange, name, engines,
-            logfile=None):
+            logfile=None, static_resources=True):
         """Builds a yaml config file to feed to the process dispatcher
 
         @param exchange: the AMQP exchange the service should be on
@@ -202,6 +203,7 @@ class EPUHarness(object):
           'processdispatcher': {
             'topic': name,
             'engines': engines,
+            'static_resources': static_resources,
           },
           'logging': {
             'loggers': {
@@ -229,7 +231,8 @@ class EPUHarness(object):
         return config_filename
 
     def _start_eeagent(self, name, process_dispatcher, launch_type,
-            pyon_directory=None, logfile=None, exe_name="eeagent", slots=None):
+            pyon_directory=None, logfile=None, exe_name="eeagent", slots=None,
+            supd_directory=None):
         """Starts an eeagent with SupervisorD
 
         @param name: Name of process dispatcher to start
@@ -245,7 +248,7 @@ class EPUHarness(object):
 
         config_file = self._build_eeagent_config(self.exchange, name,
                 process_dispatcher, launch_type, pyon_directory,
-                logfile=logfile, slots=slots)
+                logfile=logfile, slots=slots, supd_directory=supd_directory)
         cmd = "%s %s" % (exe_name, config_file)
         pid = self.factory.get_pidantic(command=cmd, process_name=name,
                 directory=self.pidantic_dir, autorestart=True)
@@ -276,6 +279,11 @@ class EPUHarness(object):
             raise DeploymentDescriptionError(msg)
         if not slots:
             slots = 8
+
+        try:
+            os.makedirs(supd_directory)
+        except OSError:
+            log.debug("%s already exists. Continuing.", exc_info=True)
 
         config = {
           'server': {

@@ -4,3 +4,6 @@ class DeploymentDescriptionError(BaseException):
 
 class ProgrammingError(BaseException):
     pass
+
+class HarnessException(BaseException):
+    pass
