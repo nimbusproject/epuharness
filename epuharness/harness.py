@@ -26,16 +26,19 @@ class EPUHarness(object):
     """
     #TODO: add framework for pyon messaging
 
-    def __init__(self, exchange=None, pidantic_dir=None, amqp_uri=None):
+    def __init__(self, exchange=None, pidantic_dir=None, amqp_uri=None, config=None):
 
         configs = ["epuharness"]
         config_files = get_config_paths(configs)
+        if config:
+            config_files.append(config)
         self.CFG = bootstrap.configure(config_files)
 
         self.pidantic_dir = pidantic_dir or self.CFG.epuharness.pidantic_dir
         self.exchange = exchange or self.CFG.server.amqp.get('exchange', None) or str(uuid.uuid4())
         self.CFG.server.amqp.exchange = self.exchange
         self.dashi = bootstrap.dashi_connect(self.CFG.dashi.topic, self.CFG, amqp_uri=amqp_uri)
+        self.amqp_cfg = dict(self.CFG.server.amqp)
         self.process_dispatchers = []
 
     def _setup_factory(self):
@@ -193,12 +196,9 @@ class EPUHarness(object):
         """
         if not logfile:
             logfile = "/dev/null"
-
         config = {
           'server': {
-            'amqp': {
-              'exchange': exchange,
-            }
+            'amqp': self.amqp_cfg,
           },
           'processdispatcher': {
             'topic': name,
@@ -221,6 +221,7 @@ class EPUHarness(object):
             }
           }
         }
+        config['server']['amqp']['exchange'] = exchange
 
         config_yaml = yaml.dump(config)
 
@@ -287,9 +288,7 @@ class EPUHarness(object):
 
         config = {
           'server': {
-            'amqp': {
-              'exchange': exchange,
-            }
+            'amqp': self.amqp_cfg,
           },
           'eeagent': {
             'name': name,
@@ -321,6 +320,7 @@ class EPUHarness(object):
             }
           }
         }
+        config['server']['amqp']['exchange'] = exchange
 
         config_yaml = yaml.dump(config)
 

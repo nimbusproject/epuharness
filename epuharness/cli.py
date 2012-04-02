@@ -25,6 +25,7 @@ def main(argv=None):
 
     parser = argparse.ArgumentParser("Start EPU Services Locally")
     parser.add_argument('-f', '--force', action='store_true')
+    parser.add_argument('-c', '--config', metavar='CONFIG_FILE', default=None)
     parser.add_argument('-x', '--exchange', metavar='EXCHANGE_NAME',
             default=None)
     parser.add_argument('action', metavar='ACTION', help='start or stop')
@@ -32,7 +33,7 @@ def main(argv=None):
             default=[], nargs='*')
     args = parser.parse_args(argv)
 
-    epuharness = EPUHarness(exchange=args.exchange)
+    epuharness = EPUHarness(exchange=args.exchange, config=args.config)
 
     action = args.action.lower()
     if action == 'start':
