@@ -19,6 +19,26 @@ nodes:
       eeagent_nodeone:
         launch_type: supd
         logfile: /tmp/eeagent_nodeone.log
+provisioners:
+  provisioner_0:
+    config:
+      provisioner:
+        default_user: default
+        dtrs: epu.localdtrs.LocalDTRS
+      logging:
+        handlers:
+          file:
+            filename: /tmp/provisioner_0.log
+epums:
+  epum_0:
+    config:
+      epumanagement:
+        default_user: default
+        provisioner_topic: provisioner_0
+      logging:
+        handlers:
+          file:
+            filename: /tmp/epum_0.log
 """
 
 
