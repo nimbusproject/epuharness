@@ -6,6 +6,7 @@ server:
     password: guest
     vhost: /
     heartbeat: 30
+    exchange: default_dashi_exchange
 epuharness:
   pidantic_dir: /tmp/SupD/epuharness
 dashi:
