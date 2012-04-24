@@ -6,7 +6,8 @@ import yaml
 import shutil
 import logging
 import tempfile
-import dashi.bootstrap as bootstrap 
+import collections
+import dashi.bootstrap as bootstrap
 
 from socket import timeout
 from pidantic.supd.pidsupd import SupDPidanticFactory
@@ -99,7 +100,7 @@ class EPUHarness(object):
                 command = instance._program_object.command
                 command = command.split()
                 [os.remove(config) for config in command if config.endswith('.yml')]
-            except e:
+            except Exception, e:
                 # Perhaps instance internals have changed
                 log.warning("Couldn't delete temporary config files: %s" % e)
             instance.cleanup()
@@ -110,7 +111,7 @@ class EPUHarness(object):
 
     def start(self, deployment_file=None, deployment_str=None):
         """Start services defined in the deployment file provided. If a
-        deployment file isn't provided, then start a standard set of one 
+        deployment file isn't provided, then start a standard set of one
         Process Dispatcher and one eeagent.
 
         @param deployment_str: A deployment description in str form
@@ -133,12 +134,25 @@ class EPUHarness(object):
         else:
             deployment = parse_deployment(yaml_str=DEFAULT_DEPLOYMENT)
 
+        # Start Provisioners
+        self.provisioners = deployment.get('provisioners', {})
+        for prov_name, provisioner in self.provisioners.iteritems():
+            self._start_provisioner(prov_name, provisioner.get('config', {}))
 
+        # Start EPUMs
+        self.epums = deployment.get('epums', {})
+        for epum_name, epum in self.epums.iteritems():
+            self._start_epum(epum_name, epum.get('config', {}))
+
+
+        # Start Process Dispatchers
         self.process_dispatchers = deployment.get('process-dispatchers', {})
         for pd_name, pd in self.process_dispatchers.iteritems():
-            self._start_process_dispatcher(pd_name, pd.get('engines', {}), 
+            self._start_process_dispatcher(pd_name, pd.get('engines', {}),
                 logfile=pd.get('logfile'))
 
+
+        # Start Nodes and EEAgents
         nodes = deployment.get('nodes', {})
         for node_name, node in nodes.iteritems():
 
@@ -154,19 +168,98 @@ class EPUHarness(object):
                 dispatcher = eeagent.get('process-dispatcher') or \
                         node.get('process-dispatcher', '')
                 self._start_eeagent(eeagent_name, dispatcher,
-                        eeagent['launch_type'], 
+                        eeagent['launch_type'],
                         pyon_directory=eeagent.get('pyon_directory'),
                         logfile=eeagent.get('logfile'),
                         slots=eeagent.get('slots'),
                         supd_directory=os.path.join(self.pidantic_dir, eeagent_name))
 
-        
+    def _start_epum(self, name, config,
+            exe_name="epu-management-service"):
+        """Starts a provisioner with SupervisorD
+
+        @param name: name of epum to start
+        @param config: an epum config
+        """
+
+        log.info("Starting EPUM '%s'" % name)
+
+        config_file = self._build_epum_config(self.exchange, config)
+
+        cmd = "%s %s" % (exe_name, config_file)
+        log.debug("Running command '%s'" % cmd)
+        pid = self.factory.get_pidantic(command=cmd, process_name=name,
+                directory=self.pidantic_dir)
+        pid.start()
+
+    def _build_epum_config(self, exchange, config):
+
+        default = {
+          "server":{
+            "exchange": exchange
+          }
+        }
+
+        merged_config = dict_merge(default, config)
+
+        config_yaml = yaml.dump(merged_config)
+
+        (os_handle, config_filename) = tempfile.mkstemp(suffix='.yml')
+        os.write(os_handle, config_yaml)
+        os.close(os_handle)
+
+        return config_filename
+
+    def _start_provisioner(self, name, config,
+            exe_name="epu-provisioner-service"):
+        """Starts a provisioner with SupervisorD
+
+        @param name: name of provisioner to start
+        @param config: a provisioner config
+        """
+
+        log.info("Starting Provisioner '%s'" % name)
+
+        config_file = self._build_provisioner_config(self.exchange, config)
+
+        cmd = "%s %s" % (exe_name, config_file)
+        log.debug("Running command '%s'" % cmd)
+        pid = self.factory.get_pidantic(command=cmd, process_name=name,
+                directory=self.pidantic_dir)
+        pid.start()
+
+    def _build_provisioner_config(self, exchange, config):
+
+        default = {
+          "server":{
+            "exchange": exchange
+          },
+          "provisioner":{
+          }
+        }
+
+        dt_path = config.get('provisioner', {}).get('dt_path', None)
+        if not dt_path:
+            dt_path = tempfile.mkdtemp()
+        default['provisioner']['dt_path'] = dt_path
+
+        merged_config = dict_merge(default, config)
+
+        config_yaml = yaml.dump(merged_config)
+
+        (os_handle, config_filename) = tempfile.mkstemp(suffix='.yml')
+        os.write(os_handle, config_yaml)
+        os.close(os_handle)
+
+        return config_filename
+
+
     def _start_process_dispatcher(self, name, engines, logfile=None,
             exe_name="epu-processdispatcher-service"):
         """Starts a process dispatcher with SupervisorD
 
         @param name: Name of process dispatcher to start
-        @param engines: a dictionary of eeagent configs. Same format as the 
+        @param engines: a dictionary of eeagent configs. Same format as the
                 Process Dispatcher config file
         @param exe_name: the name of the process dispatcher executable
         """
@@ -190,7 +283,7 @@ class EPUHarness(object):
         @param exchange: the AMQP exchange the service should be on
         @param name: name of the process dispatcher, used as the topic to be
                 addressed on AMQP
-        @param engines: a dictionary of eeagent configs. Same format as the     
+        @param engines: a dictionary of eeagent configs. Same format as the
                 Process Dispatcher config file
         @param logfile: the log file for the Process Dispatcher
         """
@@ -261,8 +354,8 @@ class EPUHarness(object):
         @param exchange: the AMQP exchange the service should be on
         @param name: name of the eeagent, used as the topic to be addressed
                 on AMQP
-        @param process_dispatcher: the name of the parent Process Dispatcher to 
-                connect to          
+        @param process_dispatcher: the name of the parent Process Dispatcher to
+                connect to
         @param launch_type: launch_type of eeagent (fork, supd, or pyon_single)
         @param logfile: the log file for the eeagent
         @param slots: the number of slots available for processes
@@ -346,7 +439,7 @@ class EPUHarness(object):
         pd_client = ProcessDispatcherClient(self.dashi, process_dispatcher)
         log.info("Announcing %s of type %s is '%s' to %s" % (node_name,
             deployable_type, state, process_dispatcher))
-            
+
         for i in range(1, ADVERTISE_RETRIES):
             try:
                 pd_client.dt_state(node_name, deployable_type, state)
@@ -355,3 +448,35 @@ class EPUHarness(object):
                 wait_time = i*i # Exponentially increasing wait
                 log.warning("PD '%s' not available yet. Waiting %ss" % (process_dispatcher, wait_time))
                 time.sleep(2**i)
+# dict_merge from: http://appdelegateinc.com/blog/2011/01/12/merge-deeply-nested-dicts-in-python/
+
+def quacks_like_dict(object):
+    """Check if object is dict-like"""
+    return isinstance(object, collections.Mapping)
+
+def dict_merge(a, b):
+    """Merge two deep dicts non-destructively
+
+    Uses a stack to avoid maximum recursion depth exceptions
+
+    >>> a = {'a': 1, 'b': {1: 1, 2: 2}, 'd': 6}
+    >>> b = {'c': 3, 'b': {2: 7}, 'd': {'z': [1, 2, 3]}}
+    >>> c = merge(a, b)
+    >>> from pprint import pprint; pprint(c)
+    {'a': 1, 'b': {1: 1, 2: 7}, 'c': 3, 'd': {'z': [1, 2, 3]}}
+    """
+    assert quacks_like_dict(a), quacks_like_dict(b)
+    dst = a.copy()
+
+    stack = [(dst, b)]
+    while stack:
+        current_dst, current_src = stack.pop()
+        for key in current_src:
+            if key not in current_dst:
+                current_dst[key] = current_src[key]
+            else:
+                if quacks_like_dict(current_src[key]) and quacks_like_dict(current_dst[key]) :
+                    stack.append((current_dst[key], current_src[key]))
+                else:
+                    current_dst[key] = current_src[key]
+    return dst
