@@ -1,0 +1,16 @@
+process-dispatchers:
+  pd_0:
+    logfile: /tmp/pd_0.log
+    engines:
+      default:
+        deployable_type: eeagent
+        slots: 4
+        base_need: 1
+nodes:
+  nodeone:
+    dt: eeagent
+    process-dispatcher: pd_0
+    eeagents:
+      eeagent_nodeone:
+        launch_type: supd
+        logfile: /tmp/eeagent_nodeone.log
