@@ -40,10 +40,11 @@ def main(argv=None):
         configs = args.extras
         if len(configs) > 0:
             config = configs[0]
-            if config.endswith('.yml') or config.endswith('.json'):
+            if (config.endswith('.yaml') or config.endswith('.yml')
+                or config.endswith('.json')):
                 deployment_file = config
             else:
-                print >>sys.stderr, "Your configuration file isn't recognized"
+                print >>sys.stderr, "Your configuration file isn't recognized. I expect a json or yaml config file"
                 sys.exit(ERROR_RETURN)
         else:
             deployment_file = None
