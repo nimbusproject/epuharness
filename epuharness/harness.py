@@ -35,6 +35,7 @@ class EPUHarness(object):
             config_files.append(config)
         self.CFG = bootstrap.configure(config_files)
 
+        self.logdir = self.CFG.epuharness.logdir
         self.pidantic_dir = pidantic_dir or self.CFG.epuharness.pidantic_dir
         self.exchange = exchange or self.CFG.server.amqp.get('exchange', None) or str(uuid.uuid4())
         self.CFG.server.amqp.exchange = self.exchange
@@ -148,8 +149,7 @@ class EPUHarness(object):
         # Start Process Dispatchers
         self.process_dispatchers = deployment.get('process-dispatchers', {})
         for pd_name, pd in self.process_dispatchers.iteritems():
-            self._start_process_dispatcher(pd_name, pd.get('engines', {}),
-                logfile=pd.get('logfile'))
+            self._start_process_dispatcher(pd_name, pd.get('config', {}))
 
 
         # Start Nodes and EEAgents
@@ -184,7 +184,7 @@ class EPUHarness(object):
 
         log.info("Starting EPUM '%s'" % name)
 
-        config_file = self._build_epum_config(self.exchange, config)
+        config_file = self._build_epum_config(name, self.exchange, config)
 
         cmd = "%s %s" % (exe_name, config_file)
         log.debug("Running command '%s'" % cmd)
@@ -192,11 +192,31 @@ class EPUHarness(object):
                 directory=self.pidantic_dir)
         pid.start()
 
-    def _build_epum_config(self, exchange, config):
+    def _build_epum_config(self, name, exchange, config, logfile=None):
+
+        if not logfile:
+            logfile = os.path.join(self.logdir, "%s.log" % name)
 
         default = {
           "server":{
-            "exchange": exchange
+            'amqp':{
+              'exchange': exchange
+            }
+          },
+          'logging': {
+            'loggers': {
+              'epumanagement': {
+                'handlers': ['file', 'console']
+              }
+            },
+            'handlers': {
+              'file': {
+                'filename': logfile,
+              }
+            },
+            'root': {
+              'handlers': ['file', 'console']
+            }
           }
         }
 
@@ -220,7 +240,7 @@ class EPUHarness(object):
 
         log.info("Starting Provisioner '%s'" % name)
 
-        config_file = self._build_provisioner_config(self.exchange, config)
+        config_file = self._build_provisioner_config(name, self.exchange, config)
 
         cmd = "%s %s" % (exe_name, config_file)
         log.debug("Running command '%s'" % cmd)
@@ -228,13 +248,31 @@ class EPUHarness(object):
                 directory=self.pidantic_dir)
         pid.start()
 
-    def _build_provisioner_config(self, exchange, config):
+    def _build_provisioner_config(self, name, exchange, config, logfile=None):
+
+        if not logfile:
+            logfile = os.path.join(self.logdir, "%s.log" % name)
 
         default = {
-          "server":{
+          'server':{
             "exchange": exchange
           },
-          "provisioner":{
+          'provisioner':{
+          },
+          'logging': {
+            'loggers': {
+              'provisioner': {
+                'handlers': ['file', 'console']
+              }
+            },
+            'handlers': {
+              'file': {
+                'filename': logfile,
+              }
+            },
+            'root': {
+              'handlers': ['file', 'console']
+            }
           }
         }
 
@@ -254,12 +292,12 @@ class EPUHarness(object):
         return config_filename
 
 
-    def _start_process_dispatcher(self, name, engines, logfile=None,
+    def _start_process_dispatcher(self, name, config, logfile=None,
             exe_name="epu-processdispatcher-service"):
         """Starts a process dispatcher with SupervisorD
 
         @param name: Name of process dispatcher to start
-        @param engines: a dictionary of eeagent configs. Same format as the
+        @param config: a dictionary in the same format as the
                 Process Dispatcher config file
         @param exe_name: the name of the process dispatcher executable
         """
@@ -267,7 +305,7 @@ class EPUHarness(object):
         log.info("Starting Process Dispatcher '%s'" % name)
 
         config_file = self._build_process_dispatcher_config(self.exchange,
-                name, engines, logfile=logfile)
+                name, config, logfile=logfile)
 
         cmd = "%s %s" % (exe_name, config_file)
         log.debug("Running command '%s'" % cmd)
@@ -276,7 +314,7 @@ class EPUHarness(object):
         pid.start()
 
 
-    def _build_process_dispatcher_config(self, exchange, name, engines,
+    def _build_process_dispatcher_config(self, exchange, name, config,
             logfile=None, static_resources=True):
         """Builds a yaml config file to feed to the process dispatcher
 
@@ -288,14 +326,13 @@ class EPUHarness(object):
         @param logfile: the log file for the Process Dispatcher
         """
         if not logfile:
-            logfile = "/dev/null"
-        config = {
+            logfile = os.path.join(self.logdir, "%s.log" % name)
+        default = {
           'server': {
             'amqp': self.amqp_cfg,
           },
           'processdispatcher': {
             'topic': name,
-            'engines': engines,
             'static_resources': static_resources,
           },
           'logging': {
@@ -314,11 +351,13 @@ class EPUHarness(object):
             }
           }
         }
-        config['server']['amqp']['exchange'] = exchange
+        default['server']['amqp']['exchange'] = exchange
 
-        config_yaml = yaml.dump(config)
+        merged_config = dict_merge(default, config)
 
-        (os_handle, config_filename) = tempfile.mkstemp(suffix='.yml')
+        config_yaml = yaml.dump(merged_config)
+
+        (os_handle, config_filename) = tempfile.mkstemp(prefix="%s_" % name, suffix='.yml')
         os.write(os_handle, config_yaml)
         os.close(os_handle)
 

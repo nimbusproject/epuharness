@@ -8,6 +8,7 @@ server:
     heartbeat: 30
     exchange: default_dashi_exchange
 epuharness:
+  logdir: /tmp
   pidantic_dir: /tmp/SupD/epuharness
 dashi:
   topic: epu-harness

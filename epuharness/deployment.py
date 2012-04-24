@@ -5,12 +5,13 @@ from exceptions import *
 DEFAULT_DEPLOYMENT = """---
 process-dispatchers:
   pd_0:
-    logfile: /tmp/pd_0.log
-    engines:
-      default:
-        deployable_type: eeagent
-        slots: 4
-        base_need: 1
+    config:
+      processdispatcher:
+        engines:
+          default:
+            deployable_type: eeagent
+            slots: 4
+            base_need: 1
 nodes:
   nodeone:
     dt: eeagent
@@ -25,10 +26,6 @@ provisioners:
       provisioner:
         default_user: default
         dtrs: epu.localdtrs.LocalDTRS
-      logging:
-        handlers:
-          file:
-            filename: /tmp/provisioner_0.log
 epums:
   epum_0:
     config:
