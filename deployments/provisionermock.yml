@@ -1,0 +1,10 @@
+provisioners:
+  prov_0:
+    config:
+      provisioner:
+        dt_path: /Users/patricka/ooi/dt-data/dt/
+      sites:
+        ec2-mock:
+          driver_class: epu.mocklibcloud.MockEC2NodeDriver
+          driver_kwargs:
+            sqlite_db: /tmp/mockec2.db
