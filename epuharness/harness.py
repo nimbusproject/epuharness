@@ -176,7 +176,7 @@ class EPUHarness(object):
 
     def _start_epum(self, name, config,
             exe_name="epu-management-service"):
-        """Starts a provisioner with SupervisorD
+        """Starts an epum with SupervisorD
 
         @param name: name of epum to start
         @param config: an epum config
@@ -225,8 +225,8 @@ class EPUHarness(object):
         config_yaml = yaml.dump(merged_config)
 
         (os_handle, config_filename) = tempfile.mkstemp(suffix='.yml')
-        os.write(os_handle, config_yaml)
-        os.close(os_handle)
+        with open(config_filename, "w") as config_f:
+            config_f.write(config_yaml)
 
         return config_filename
 
@@ -255,9 +255,12 @@ class EPUHarness(object):
 
         default = {
           'server':{
-            "exchange": exchange
+            'amqp':{
+              'exchange': exchange
+            }
           },
           'provisioner':{
+            'topic': name,
           },
           'logging': {
             'loggers': {
@@ -286,8 +289,8 @@ class EPUHarness(object):
         config_yaml = yaml.dump(merged_config)
 
         (os_handle, config_filename) = tempfile.mkstemp(suffix='.yml')
-        os.write(os_handle, config_yaml)
-        os.close(os_handle)
+        with open(config_filename, "w") as config_f:
+            config_f.write(config_yaml)
 
         return config_filename
 
@@ -358,8 +361,8 @@ class EPUHarness(object):
         config_yaml = yaml.dump(merged_config)
 
         (os_handle, config_filename) = tempfile.mkstemp(prefix="%s_" % name, suffix='.yml')
-        os.write(os_handle, config_yaml)
-        os.close(os_handle)
+        with open(config_filename, "w") as config_f:
+            config_f.write(config_yaml)
 
         return config_filename
 
@@ -457,8 +460,8 @@ class EPUHarness(object):
         config_yaml = yaml.dump(config)
 
         (os_handle, config_filename) = tempfile.mkstemp(suffix='.yml')
-        os.write(os_handle, config_yaml)
-        os.close(os_handle)
+        with open(config_filename, "w") as config_f:
+            config_f.write(config_yaml)
 
         return config_filename
 
