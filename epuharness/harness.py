@@ -260,7 +260,7 @@ class EPUHarness(object):
             }
           },
           'provisioner':{
-            'topic': name,
+            'service_name': name,
           },
           'logging': {
             'loggers': {
@@ -335,7 +335,7 @@ class EPUHarness(object):
             'amqp': self.amqp_cfg,
           },
           'processdispatcher': {
-            'topic': name,
+            'service_name': name,
             'static_resources': static_resources,
           },
           'logging': {
