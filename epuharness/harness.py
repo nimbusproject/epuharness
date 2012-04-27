@@ -198,10 +198,13 @@ class EPUHarness(object):
             logfile = os.path.join(self.logdir, "%s.log" % name)
 
         default = {
-          "server":{
+          'server':{
             'amqp':{
               'exchange': exchange
             }
+          },
+          'epumanagement':{
+            'service_name': name,
           },
           'logging': {
             'loggers': {
@@ -218,6 +221,7 @@ class EPUHarness(object):
               'handlers': ['file', 'console']
             }
           }
+
         }
 
         merged_config = dict_merge(default, config)
