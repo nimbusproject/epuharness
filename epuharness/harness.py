@@ -184,18 +184,26 @@ class EPUHarness(object):
 
         log.info("Starting EPUM '%s'" % name)
 
-        config_file = self._build_epum_config(name, self.exchange, config)
+        replica_count = config.get('replica_count', 1)
+        for instance in range(0, replica_count):
+            config_file = self._build_epum_config(name, self.exchange, config, instance=instance)
 
-        cmd = "%s %s" % (exe_name, config_file)
-        log.debug("Running command '%s'" % cmd)
-        pid = self.factory.get_pidantic(command=cmd, process_name=name,
-                directory=self.pidantic_dir)
-        pid.start()
+            proc_name = "%s-%s" % (name, instance)
+            cmd = "%s %s" % (exe_name, config_file)
+            log.debug("Running command '%s'" % cmd)
+            pid = self.factory.get_pidantic(command=cmd, process_name=proc_name,
+                    directory=self.pidantic_dir)
+            pid.start()
 
-    def _build_epum_config(self, name, exchange, config, logfile=None):
+    def _build_epum_config(self, name, exchange, config, logfile=None, instance=None):
+
+        if instance:
+            instance_tag = "-%s" % instance
+        else:
+            instance_tag = ""
 
         if not logfile:
-            logfile = os.path.join(self.logdir, "%s.log" % name)
+            logfile = os.path.join(self.logdir, "%s%s.log" % (name, instance_tag))
 
         default = {
           'server':{
@@ -244,18 +252,26 @@ class EPUHarness(object):
 
         log.info("Starting Provisioner '%s'" % name)
 
-        config_file = self._build_provisioner_config(name, self.exchange, config)
+        replica_count = config.get('replica_count', 1)
+        for instance in range(0, replica_count):
+            config_file = self._build_provisioner_config(name, self.exchange, config, instance=1)
 
-        cmd = "%s %s" % (exe_name, config_file)
-        log.debug("Running command '%s'" % cmd)
-        pid = self.factory.get_pidantic(command=cmd, process_name=name,
-                directory=self.pidantic_dir)
-        pid.start()
+            proc_name = "%s-%s" % (name, instance)
+            cmd = "%s %s" % (exe_name, config_file)
+            log.debug("Running command '%s'" % cmd)
+            pid = self.factory.get_pidantic(command=cmd, process_name=proc_name,
+                    directory=self.pidantic_dir)
+            pid.start()
 
-    def _build_provisioner_config(self, name, exchange, config, logfile=None):
+    def _build_provisioner_config(self, name, exchange, config, logfile=None, instance=None):
+
+        if instance:
+            instance_tag = "-%s" % instance
+        else:
+            instance_tag = ""
 
         if not logfile:
-            logfile = os.path.join(self.logdir, "%s.log" % name)
+            logfile = os.path.join(self.logdir, "%s%s.log" % (name, instance_tag))
 
         default = {
           'server':{
@@ -311,18 +327,22 @@ class EPUHarness(object):
 
         log.info("Starting Process Dispatcher '%s'" % name)
 
-        config_file = self._build_process_dispatcher_config(self.exchange,
-                name, config, logfile=logfile)
+        replica_count = config.get('replica_count', 1)
+        for instance in range(0, replica_count):
 
-        cmd = "%s %s" % (exe_name, config_file)
-        log.debug("Running command '%s'" % cmd)
-        pid = self.factory.get_pidantic(command=cmd, process_name=name,
-                directory=self.pidantic_dir)
-        pid.start()
+            config_file = self._build_process_dispatcher_config(self.exchange,
+                    name, config, logfile=logfile, instance=instance)
+
+            proc_name = "%s-%s" % (name, instance)
+            cmd = "%s %s" % (exe_name, config_file)
+            log.debug("Running command '%s'" % cmd)
+            pid = self.factory.get_pidantic(command=cmd, process_name=proc_name,
+                    directory=self.pidantic_dir)
+            pid.start()
 
 
     def _build_process_dispatcher_config(self, exchange, name, config,
-            logfile=None, static_resources=True):
+            logfile=None, static_resources=True, instance=None):
         """Builds a yaml config file to feed to the process dispatcher
 
         @param exchange: the AMQP exchange the service should be on
@@ -332,8 +352,14 @@ class EPUHarness(object):
                 Process Dispatcher config file
         @param logfile: the log file for the Process Dispatcher
         """
+        if instance:
+            instance_tag = "-%s" % instance
+        else:
+            instance_tag = ""
+
         if not logfile:
-            logfile = os.path.join(self.logdir, "%s.log" % name)
+            logfile = os.path.join(self.logdir, "%s%s.log" % (name, instance_tag))
+
         default = {
           'server': {
             'amqp': self.amqp_cfg,
