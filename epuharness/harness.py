@@ -140,6 +140,11 @@ class EPUHarness(object):
         for prov_name, provisioner in self.provisioners.iteritems():
             self._start_provisioner(prov_name, provisioner.get('config', {}))
 
+        # Start DTRS
+        self.dtrses = deployment.get('dt_registries', {})
+        for dtrs_name, dtrs in self.dtrses.iteritems():
+            self._start_dtrs(dtrs_name, dtrs.get('config', {}))
+
         # Start EPUMs
         self.epums = deployment.get('epums', {})
         for epum_name, epum in self.epums.iteritems():
@@ -254,7 +259,7 @@ class EPUHarness(object):
 
         replica_count = config.get('replica_count', 1)
         for instance in range(0, replica_count):
-            config_file = self._build_provisioner_config(name, self.exchange, config, instance=1)
+            config_file = self._build_provisioner_config(name, self.exchange, config, instance=instance)
 
             proc_name = "%s-%s" % (name, instance)
             cmd = "%s %s" % (exe_name, config_file)
@@ -314,6 +319,71 @@ class EPUHarness(object):
 
         return config_filename
 
+    def _start_dtrs(self, name, config, exe_name="epu-dtrs"):
+        """Starts a dtrs with SupervisorD
+
+        @param name: name of dtrs to start
+        @param config: a dtrs config
+        """
+
+        log.info("Starting DTRS '%s'" % name)
+
+        replica_count = config.get('replica_count', 1)
+        for instance in range(0, replica_count):
+            config_file = self._build_dtrs_config(name, self.exchange, config, instance=instance)
+
+            proc_name = "%s-%s" % (name, instance)
+            cmd = "%s %s" % (exe_name, config_file)
+            log.debug("Running command '%s'" % cmd)
+            pid = self.factory.get_pidantic(command=cmd, process_name=proc_name,
+                    directory=self.pidantic_dir)
+            pid.start()
+
+    def _build_dtrs_config(self, name, exchange, config, logfile=None, instance=None):
+
+        if instance:
+            instance_tag = "-%s" % instance
+        else:
+            instance_tag = ""
+
+        if not logfile:
+            logfile = os.path.join(self.logdir, "%s%s.log" % (name, instance_tag))
+
+        default = {
+          'server':{
+            'amqp':{
+              'exchange': exchange
+            }
+          },
+          'dtrs':{
+            'service_name': name
+          },
+          'logging': {
+            'loggers': {
+              'dtrs': {
+                'handlers': ['file', 'console']
+              }
+            },
+            'handlers': {
+              'file': {
+                'filename': logfile,
+              }
+            },
+            'root': {
+              'handlers': ['file', 'console']
+            }
+          }
+        }
+
+        merged_config = dict_merge(default, config)
+
+        config_yaml = yaml.dump(merged_config)
+
+        (os_handle, config_filename) = tempfile.mkstemp(suffix='.yml')
+        with open(config_filename, "w") as config_f:
+            config_f.write(config_yaml)
+
+        return config_filename
 
     def _start_process_dispatcher(self, name, config, logfile=None,
             exe_name="epu-processdispatcher-service"):
