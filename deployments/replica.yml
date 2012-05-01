@@ -1,0 +1,7 @@
+provisioners:
+  provisioner_0:
+    config:
+      replica_count: 5
+      provisioner:
+        default_user: default
+        dtrs: epu.localdtrs.LocalDTRS

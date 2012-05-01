@@ -1,0 +1,14 @@
+provisioners:
+  provisioner:
+    config:
+      provisioner:
+        dtrs_service_name: dtrs
+      sites:
+        ec2-mock:
+          driver_class: epu.mocklibcloud.MockEC2NodeDriver
+          driver_kwargs:
+           sqlite_db: /tmp/mockec2.db
+dt_registries:
+  dtrs:
+    config:
+      dtrs: {}
