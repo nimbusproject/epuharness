@@ -66,4 +66,10 @@ When you're ready to stop the service, you can do so like so:
 Installation
 ------------
 
-    python setup.py install
+For deployment:
+
+    pip install -r requirements.txt
+
+For development of epu-harness itself:
+
+    python setup.py develop
