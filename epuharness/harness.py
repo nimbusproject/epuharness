@@ -179,6 +179,84 @@ class EPUHarness(object):
                         slots=eeagent.get('slots'),
                         supd_directory=os.path.join(self.pidantic_dir, eeagent_name))
 
+        # Start Phantom
+        self.phantom_instances = deployment.get('phantom-instances', {})
+        for phantom_name, phantom in self.phantom_instances.iteritems():
+            port = phantom.get('port')
+            users = phantom.get('users', [])
+            self._start_phantom(phantom_name, phantom.get('config', {}), users, port=port)
+
+    def _start_phantom(self, name, config, users, port=None, exe_name='phantomcherrypy'):
+
+        if not port:
+            port = 8080
+
+        log.info("Starting Phantom '%s'" % name)
+        authz_file = self._build_phantom_authz_file(users)
+        print authz_file
+
+        config_file = self._build_phantom_config(name, self.exchange, config, authz_file)
+        cmd = "%s %s %s" % (exe_name, config_file, port)
+        log.debug("Running command '%s'" % cmd)
+        pid = self.factory.get_pidantic(command=cmd, process_name=name,
+                directory=self.pidantic_dir)
+        pid.start()
+
+    def _build_phantom_authz_file(self, users):
+        """expects a list of user/passwords like:
+
+        [
+         {user: username1, password: password1},
+         {user: username2, password: password2}
+        ]
+
+        """
+        pw_file_contents = ""
+
+        for user in users:
+            pw_file_contents += "%s\n%s\n" % (user.get('user', ''), user.get('password', ''))
+
+        (os_handle, pw_filename) = tempfile.mkstemp()
+        with open(pw_filename, "w") as pw_f:
+            pw_f.write(pw_file_contents)
+
+        return pw_filename
+        
+
+
+    def _build_phantom_config(self, name, exchange, config, authz_file, logfile=None):
+
+        if not logfile:
+            logfile = os.path.join(self.logdir, "%s.log" % name)
+
+        default = {
+          'phantom':{
+            'system':{
+              'type': 'epu',
+              'broker': 'localhost',
+              'broker_port': 5672,
+              'broker_ssl': 'False',
+              'rabbit_user': 'guest',
+              'rabbit_pw': 'guest',
+              'rabbit_exchange': exchange
+            },
+            'authz':{
+              'type': 'simple_file',
+              'filename': authz_file
+            }
+          }
+        }
+
+        merged_config = dict_merge(default, config)
+
+        config_yaml = yaml.dump(merged_config)
+
+        (os_handle, config_filename) = tempfile.mkstemp(suffix='.yml')
+        with open(config_filename, "w") as config_f:
+            config_f.write(config_yaml)
+
+        return config_filename
+
     def _start_epum(self, name, config,
             exe_name="epu-management-service"):
         """Starts an epum with SupervisorD
