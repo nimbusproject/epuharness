@@ -3,7 +3,7 @@ EPU Harness
 
 A tool to deploy EPU locally for development.
 
-Refer to https://confluence.oceanobservatories.org/display/CIDev/Lightweight+CEI+Launch
+Refer to https://confluence.oceanobservatories.org/display/syseng/CIAD+CEI+SV+Lightweight+CEI+Launch
 
 Usage
 -----
