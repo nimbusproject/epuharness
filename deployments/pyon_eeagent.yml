@@ -1,0 +1,17 @@
+pyon_nodes:
+  node_one:
+    eeagents:
+      some_eea:
+        config:
+          server:
+            couchdb:
+              host: localhost
+              username: guest
+              password: guest
+          eeagent:
+            heartbeat: 10
+            slots: 80
+            launch_type:
+              name: pyon
+              pyon_directory: pathtoyour/coi-services/
+              supd_directory: /tmp/
