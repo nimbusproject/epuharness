@@ -42,7 +42,6 @@ class EPUHarness(object):
         self.CFG.server.amqp.exchange = self.exchange
         self.dashi = bootstrap.dashi_connect(self.CFG.dashi.topic, self.CFG, amqp_uri=amqp_uri)
         self.amqp_cfg = dict(self.CFG.server.amqp)
-        self.process_dispatchers = []
 
     def _setup_factory(self):
 
@@ -177,6 +176,15 @@ class EPUHarness(object):
                         slots=eeagent.get('slots'),
                         system_name=eeagent.get('system_name'),
                         supd_directory=os.path.join(self.pidantic_dir, eeagent_name))
+
+        pyon_nodes = deployment.get('pyon_nodes', {})
+        for node_name, node in pyon_nodes.iteritems():
+            # TODO when Pyon PD is ready
+            #self.announce_pyon_node(node_name)
+
+            for eeagent_name, eeagent in node.get('eeagents', {}).iteritems():
+                config = eeagent.get('config', {})
+                self._start_pyon_eeagent(name=eeagent_name, config=config)
 
         # Start Phantom
         self.phantom_instances = deployment.get('phantom-instances', {})
@@ -670,9 +678,95 @@ class EPUHarness(object):
                 wait_time = i * i  # Exponentially increasing wait
                 log.warning("PD '%s' not available yet. Waiting %ss" % (process_dispatcher, wait_time))
                 time.sleep(2 ** i)
+
+    def _start_pyon_eeagent(self, name=None, node_name=None, config=None):
+        if name is None:
+            name = 'eeagent'
+        if node_name is None:
+            node_name = 'somenode'
+        if config is None:
+            config = {}
+        eea_module = 'ion.agents.cei.execution_engine_agent'
+        eea_class = 'ExecutionEngineAgent'
+
+        log.info("Starting Pyon EEAgent %s" % name)
+
+        updated_config = self._build_pyon_eeagent_config(node_name, config)
+
+        pyon_directory = updated_config['eeagent']['launch_type'].get('pyon_directory')
+
+        self._start_rel(name=name, module=eea_module, cls=eea_class,
+                config=updated_config, pyon_directory=pyon_directory)
+
+    def _build_pyon_eeagent_config(self, node_name, config=None):
+        if config is None:
+            config = {}
+
+        default = {
+            'eeagent': {
+                'name': "eeagent_%s" % node_name,
+                'heartbeat': 10,
+                'slots': 80,
+                'launch_type': {
+                    'name': 'pyon',
+                    'supd_directory': '/tmp/'
+                }
+            }
+        }
+        merged_config = dict_merge(default, config)
+
+        return merged_config
+
+    def _start_rel(self, name=None, module=None, cls=None, config=None,
+            pyon_directory=None):
+        if name is None or module is None or cls is None:
+            msg = "You must provide a name, module and class to start_rel"
+            raise HarnessException(msg)
+
+        if config is None:
+            config = {}
+
+        if pyon_directory is None:
+            if self.CFG.epuharness.get('pyon_directory'):
+                pyon_directory = self.CFG.epuharness.get('pyon_directory')
+            else:
+                msg = "No pyon directory in deployment or epuharness configuration."
+                raise HarnessException(msg)
+
+        rel = {
+            'name': 'epuharness_deploy',
+            'type': 'release',
+            'version': '0.1',
+            'description': "Service started by epuharness",
+            'ion': '0.0.1',
+            'apps': [
+                {
+                'name': name,
+                'version': '0.1',
+                'description': "%s started by epuharness" % name,
+                'processapp': [name, module, cls],
+                'config': config
+                }
+            ]
+
+        }
+        rel_yaml = yaml.dump(rel)
+
+        (os_handle, rel_filename) = tempfile.mkstemp(suffix='.yml')
+        with open(rel_filename, "w") as rel_f:
+            rel_f.write(rel_yaml)
+
+        #TODO:
+        pyon_directory = '/Users/patricka/ooi/coi-services'
+        pycc_path = os.path.join(pyon_directory, 'bin/pycc')
+        cmd = "%s --rel %s --noshell" % (pycc_path, rel_filename)
+        #cmd = "pwd"
+        pid = self.factory.get_pidantic(command=cmd, process_name=name,
+                directory=pyon_directory, autorestart=True)
+        pid.start()
+
+
 # dict_merge from: http://appdelegateinc.com/blog/2011/01/12/merge-deeply-nested-dicts-in-python/
-
-
 def quacks_like_dict(object):
     """Check if object is dict-like"""
     return isinstance(object, collections.Mapping)
