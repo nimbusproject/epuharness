@@ -177,7 +177,13 @@ class EPUHarness(object):
                         system_name=eeagent.get('system_name'),
                         supd_directory=os.path.join(self.pidantic_dir, eeagent_name))
 
-        pyon_nodes = deployment.get('pyon_nodes', {})
+        # Start Pyon Process Dispatchers
+        self.pyon_process_dispatchers = deployment.get('pyon-process-dispatchers', {})
+        for pd_name, pd in self.pyon_process_dispatchers.iteritems():
+            self._start_pyon_process_dispatcher(pd_name, pd.get('config', {}))
+
+        # Start Pyon Nodes and EEAgents
+        pyon_nodes = deployment.get('pyon-nodes', {})
         for node_name, node in pyon_nodes.iteritems():
             # TODO when Pyon PD is ready
             #self.announce_pyon_node(node_name)
@@ -678,6 +684,34 @@ class EPUHarness(object):
                 wait_time = i * i  # Exponentially increasing wait
                 log.warning("PD '%s' not available yet. Waiting %ss" % (process_dispatcher, wait_time))
                 time.sleep(2 ** i)
+
+    def _start_pyon_process_dispatcher(self, name=None, config=None):
+        if name is None:
+            name = 'process_dispatcher'
+        if config is None:
+            config = {}
+        pd_module = 'ion.services.cei.process_dispatcher_service'
+        pd_class = 'ProcessDispatcherService'
+
+        log.info("Starting Pyon Process Dispatcher %s" % name)
+
+        updated_config = self._build_pyon_pd_config(config)
+
+        pyon_directory = updated_config.get('pyon_directory')
+
+        self._start_rel(name=name, module=pd_module, cls=pd_class,
+                config=updated_config, pyon_directory=pyon_directory)
+
+    def _build_pyon_pd_config(self, config=None):
+        if config is None:
+            config = {}
+
+        #TODO: assume there will be more to put here when pyon PD is ready
+        default = {
+        }
+        merged_config = dict_merge(default, config)
+
+        return merged_config
 
     def _start_pyon_eeagent(self, name=None, node_name=None, config=None):
         if name is None:

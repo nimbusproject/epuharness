@@ -1,4 +1,4 @@
-pyon_nodes:
+pyon-nodes:
   node_one:
     eeagents:
       some_eea:

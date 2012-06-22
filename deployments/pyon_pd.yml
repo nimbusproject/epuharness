@@ -1,0 +1,4 @@
+pyon-process-dispatchers:
+  process_dispatcher:
+    config:
+      pyon_directory: /Users/patricka/ooi/coi-services/
