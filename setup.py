@@ -48,7 +48,7 @@ if sys.version_info < (2, 6, 0):
 
 setupdict['install_requires'] += ['pyyaml',
                                   'dashi==0.1',
-                                  'gevent==0.13.6',
+                                  'gevent==0.13.7',
                                   'pidantic',
                                   'nose',
                                   'epu==1.2.0',
