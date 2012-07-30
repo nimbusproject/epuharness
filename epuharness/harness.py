@@ -50,7 +50,7 @@ class EPUHarness(object):
                     name="epu-harness")
         except:
             log.debug("Problem Connecting to SupervisorD", exc_info=True)
-            raise HarnessException("Could not connect to supervisord. was epu-harness started?")
+            raise HarnessException("Could not connect to supervisord. Was epu-harness started?")
 
     def status(self, exit=True):
         """Get status of services that were previously started by epuharness
