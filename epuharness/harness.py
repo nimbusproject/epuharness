@@ -94,16 +94,18 @@ class EPUHarness(object):
 
         log.info("Stopping %s" % ", ".join(services))
         for service in services:
-            instance = instances[service]
-            try:
-                # Clean up config files
-                command = instance._program_object.command
-                command = command.split()
-                [os.remove(config) for config in command if config.endswith('.yml')]
-            except Exception, e:
-                # Perhaps instance internals have changed
-                log.warning("Couldn't delete temporary config files: %s" % e)
-            instance.cleanup()
+            instances_to_kill = filter(lambda x: x.startswith(service), instances.keys())
+            for instance_name in instances_to_kill:
+                instance = instances[instance_name]
+                try:
+                    # Clean up config files
+                    command = instance._program_object.command
+                    command = command.split()
+                    [os.remove(config) for config in command if config.endswith('.yml')]
+                except Exception, e:
+                    # Perhaps instance internals have changed
+                    log.warning("Couldn't delete temporary config files: %s" % e)
+                instance.cleanup()
 
         if cleanup:
             self.factory.terminate()
