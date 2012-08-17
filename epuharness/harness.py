@@ -177,7 +177,8 @@ class EPUHarness(object):
                         logfile=eeagent.get('logfile'),
                         slots=eeagent.get('slots'),
                         system_name=eeagent.get('system_name'),
-                        supd_directory=os.path.join(self.pidantic_dir, eeagent_name))
+                        supd_directory=os.path.join(self.pidantic_dir, eeagent_name),
+                        heartbeat=eeagent.get('heartbeat'))
 
         # Start Pyon Process Dispatchers
         self.pyon_process_dispatchers = deployment.get('pyon-process-dispatchers', {})
@@ -558,7 +559,7 @@ class EPUHarness(object):
 
     def _start_eeagent(self, name, process_dispatcher, launch_type,
             pyon_directory=None, logfile=None, exe_name="eeagent", slots=None,
-            system_name=None, supd_directory=None):
+            system_name=None, supd_directory=None, heartbeat=None):
         """Starts an eeagent with SupervisorD
 
         @param name: Name of process dispatcher to start
@@ -570,13 +571,14 @@ class EPUHarness(object):
         @param exe_name: the name of the eeagent executable
         @param slots: the number of slots available for processes
         @param system_name: pyon system name
+        @param heartbeat: how often heartbeat is sent
         """
         log.info("Starting EEAgent '%s'" % name)
 
         config_file = self._build_eeagent_config(self.exchange, name,
                 process_dispatcher, launch_type, pyon_directory,
                 logfile=logfile, slots=slots, supd_directory=supd_directory,
-                system_name=system_name)
+                system_name=system_name, heartbeat=heartbeat)
         cmd = "%s %s" % (exe_name, config_file)
         pid = self.factory.get_pidantic(command=cmd, process_name=name,
                 directory=self.pidantic_dir, autorestart=True)
@@ -584,7 +586,7 @@ class EPUHarness(object):
 
     def _build_eeagent_config(self, exchange, name, process_dispatcher,
             launch_type, pyon_directory=None, logfile=None, supd_directory=None,
-            slots=None, system_name=None):
+            slots=None, system_name=None, heartbeat=None):
         """Builds a yaml config file to feed to the eeagent
 
         @param exchange: the AMQP exchange the service should be on
@@ -596,6 +598,7 @@ class EPUHarness(object):
         @param logfile: the log file for the eeagent
         @param slots: the number of slots available for processes
         @param system_name: pyon system name
+        @param heartbeat: how often heartbeat is sent
         """
         if not logfile:
             logfile = "/dev/null"
@@ -613,6 +616,9 @@ class EPUHarness(object):
         if not slots:
             slots = 8
 
+        if not heartbeat:
+            heartbeat = 30
+
         try:
             os.makedirs(supd_directory)
         except OSError:
@@ -625,6 +631,7 @@ class EPUHarness(object):
           'eeagent': {
             'name': name,
             'slots': slots,
+            'heartbeat': heartbeat,
             'launch_type': {
               'name': launch_type,
               'supd_directory': supd_directory,
