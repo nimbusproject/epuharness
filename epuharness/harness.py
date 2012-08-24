@@ -189,7 +189,8 @@ class EPUHarness(object):
         pyon_nodes = deployment.get('pyon-nodes', {})
         for node_name, node in pyon_nodes.iteritems():
             # TODO when Pyon PD is ready
-            #self.announce_pyon_node(node_name)
+            self.announce_node(node_name, node.get('dt', ''),
+                    node['process-dispatcher'])
 
             for eeagent_name, eeagent in node.get('eeagents', {}).iteritems():
                 config = eeagent.get('config', {})
@@ -209,7 +210,6 @@ class EPUHarness(object):
 
         log.info("Starting Phantom '%s'" % name)
         authz_file = self._build_phantom_authz_file(users)
-        print authz_file
 
         config_file = self._build_phantom_config(name, self.exchange, config, authz_file)
         cmd = "%s %s %s" % (exe_name, config_file, port)
@@ -707,9 +707,11 @@ class EPUHarness(object):
         updated_config = self._build_pyon_pd_config(config)
 
         pyon_directory = updated_config.get('pyon_directory')
+        sysname = updated_config.get('system', {}).get('name')
 
         self._start_rel(name=name, module=pd_module, cls=pd_class,
-                config=updated_config, pyon_directory=pyon_directory)
+                config=updated_config, pyon_directory=pyon_directory,
+                sysname=sysname)
 
     def _build_pyon_pd_config(self, config=None):
         if config is None:
@@ -737,9 +739,11 @@ class EPUHarness(object):
         updated_config = self._build_pyon_eeagent_config(node_name, config)
 
         pyon_directory = updated_config['eeagent']['launch_type'].get('pyon_directory')
+        sysname = updated_config.get('system', {}).get('name')
 
         self._start_rel(name=name, module=eea_module, cls=eea_class,
-                config=updated_config, pyon_directory=pyon_directory)
+                config=updated_config, pyon_directory=pyon_directory,
+                sysname=sysname)
 
     def _build_pyon_eeagent_config(self, node_name, config=None):
         if config is None:
@@ -761,7 +765,7 @@ class EPUHarness(object):
         return merged_config
 
     def _start_rel(self, name=None, module=None, cls=None, config=None,
-            pyon_directory=None):
+            pyon_directory=None, sysname=None):
         if name is None or module is None or cls is None:
             msg = "You must provide a name, module and class to start_rel"
             raise HarnessException(msg)
@@ -799,11 +803,10 @@ class EPUHarness(object):
         with open(rel_filename, "w") as rel_f:
             rel_f.write(rel_yaml)
 
-        #TODO:
-        pyon_directory = '/Users/patricka/ooi/coi-services'
         pycc_path = os.path.join(pyon_directory, 'bin/pycc')
         cmd = "%s --rel %s --noshell" % (pycc_path, rel_filename)
-        #cmd = "pwd"
+        if sysname is not None:
+            cmd = "%s --sysname %s" % (cmd, sysname)
         pid = self.factory.get_pidantic(command=cmd, process_name=name,
                 directory=pyon_directory, autorestart=True)
         pid.start()
