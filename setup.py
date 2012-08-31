@@ -47,11 +47,11 @@ if sys.version_info < (2, 6, 0):
     setupdict['install_requires'].append('ssl==1.15-p1')
 
 setupdict['install_requires'] += ['pyyaml',
-                                  'dashi==0.1',
+                                  'dashi',
                                   'gevent==0.13.7',
                                   'pidantic',
                                   'nose',
-                                  'epu>=1.2.0',
+                                  'epu',
                                   'apache-libcloud==0.11.1',
                                   'eeagent',
                                   'ceiclient',
