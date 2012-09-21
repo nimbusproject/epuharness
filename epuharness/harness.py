@@ -283,16 +283,16 @@ class EPUHarness(object):
 
         replica_count = config.get('replica_count', 1)
         for instance in range(0, replica_count):
-            config_file = self._build_epum_config(name, self.exchange, config, instance=instance)
-
             proc_name = "%s-%s" % (name, instance)
+            config_file = self._build_epum_config(name, self.exchange, config, instance=instance, proc_name=proc_name)
+
             cmd = "%s %s" % (exe_name, config_file)
             log.debug("Running command '%s'" % cmd)
             pid = self.factory.get_pidantic(command=cmd, process_name=proc_name,
                     directory=self.pidantic_dir)
             pid.start()
 
-    def _build_epum_config(self, name, exchange, config, logfile=None, instance=None):
+    def _build_epum_config(self, name, exchange, config, logfile=None, instance=None, proc_name=None):
 
         if instance:
             instance_tag = "-%s" % instance
@@ -329,6 +329,9 @@ class EPUHarness(object):
 
         }
 
+        if proc_name:
+            default['epumanagement']['proc_name'] = proc_name
+
         merged_config = dict_merge(default, config)
 
         config_yaml = yaml.dump(merged_config)
@@ -351,16 +354,16 @@ class EPUHarness(object):
 
         replica_count = config.get('replica_count', 1)
         for instance in range(0, replica_count):
-            config_file = self._build_provisioner_config(name, self.exchange, config, instance=instance)
-
             proc_name = "%s-%s" % (name, instance)
+            config_file = self._build_provisioner_config(name, self.exchange, config, instance=instance, proc_name=proc_name)
+
             cmd = "%s %s" % (exe_name, config_file)
             log.debug("Running command '%s'" % cmd)
             pid = self.factory.get_pidantic(command=cmd, process_name=proc_name,
                     directory=self.pidantic_dir)
             pid.start()
 
-    def _build_provisioner_config(self, name, exchange, config, logfile=None, instance=None):
+    def _build_provisioner_config(self, name, exchange, config, logfile=None, instance=None, proc_name=None):
 
         if instance:
             instance_tag = "-%s" % instance
@@ -396,6 +399,9 @@ class EPUHarness(object):
           }
         }
 
+        if proc_name:
+            default['provisioner']['proc_name'] = proc_name
+
         dt_path = config.get('provisioner', {}).get('dt_path', None)
         if not dt_path:
             dt_path = tempfile.mkdtemp()
@@ -422,16 +428,16 @@ class EPUHarness(object):
 
         replica_count = config.get('replica_count', 1)
         for instance in range(0, replica_count):
-            config_file = self._build_dtrs_config(name, self.exchange, config, instance=instance)
-
             proc_name = "%s-%s" % (name, instance)
+            config_file = self._build_dtrs_config(name, self.exchange, config, instance=instance, proc_name=proc_name)
+
             cmd = "%s %s" % (exe_name, config_file)
             log.debug("Running command '%s'" % cmd)
             pid = self.factory.get_pidantic(command=cmd, process_name=proc_name,
                     directory=self.pidantic_dir)
             pid.start()
 
-    def _build_dtrs_config(self, name, exchange, config, logfile=None, instance=None):
+    def _build_dtrs_config(self, name, exchange, config, logfile=None, instance=None, proc_name=None):
 
         if instance:
             instance_tag = "-%s" % instance
@@ -466,6 +472,10 @@ class EPUHarness(object):
             }
           }
         }
+
+        if proc_name:
+            default['dtrs']['proc_name'] = proc_name
+
 
         merged_config = dict_merge(default, config)
 
