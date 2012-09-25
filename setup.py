@@ -12,7 +12,7 @@ import os
 if sys.platform == 'darwin':
     os.environ['C_INCLUDE_PATH'] = '/usr/local/include'
 
-version = '0.1.1'
+version = '0.1.2-dev'
 
 setupdict = {
     'name' : 'epuharness',
