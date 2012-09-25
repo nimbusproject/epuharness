@@ -12,12 +12,14 @@ import os
 if sys.platform == 'darwin':
     os.environ['C_INCLUDE_PATH'] = '/usr/local/include'
 
+version = '0.1.0'
+
 setupdict = {
     'name' : 'epuharness',
-    'version' : '0.1.0',
+    'version' : version,
     'description' : 'OOICI CEI Elastic Processing Unit Test Harness',
     'url': 'https://confluence.oceanobservatories.org/display/CIDev/Common+Execution+Infrastructure+Development',
-    'download_url' : 'http://ooici.net/packages',
+    'download_url' : 'http://sddevrepo.oceanobservatories.org/releases',
     'license' : 'Apache 2.0',
     'author' : 'CEI',
     'author_email' : 'patricka@uvic.ca',
