@@ -26,7 +26,6 @@ ADVERTISE_RETRIES = 10
 class EPUHarness(object):
     """EPUHarness. Sets up Process Dispatchers and EEAgents for testing.
     """
-    #TODO: add framework for pyon messaging
 
     def __init__(self, exchange=None, pidantic_dir=None, amqp_uri=None, config=None):
 
@@ -814,7 +813,7 @@ class EPUHarness(object):
             rel_f.write(rel_yaml)
 
         pycc_path = os.path.join(pyon_directory, 'bin/pycc')
-        cmd = "%s --rel %s --noshell" % (pycc_path, rel_filename)
+        cmd = "%s -D --rel %s --cfg %s --noshell" % (pycc_path, rel_filename, config_filename)
         if sysname is not None:
             cmd = "%s --sysname %s" % (cmd, sysname)
         pid = self.factory.get_pidantic(command=cmd, process_name=name,
