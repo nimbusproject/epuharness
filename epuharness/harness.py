@@ -813,7 +813,7 @@ class EPUHarness(object):
             rel_f.write(rel_yaml)
 
         pycc_path = os.path.join(pyon_directory, 'bin/pycc')
-        cmd = "%s -D --rel %s --cfg %s --noshell" % (pycc_path, rel_filename)
+        cmd = "%s -D --rel %s --noshell" % (pycc_path, rel_filename)
         if sysname is not None:
             cmd = "%s --sysname %s" % (cmd, sysname)
         pid = self.factory.get_pidantic(command=cmd, process_name=name,
