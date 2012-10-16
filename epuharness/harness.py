@@ -36,7 +36,9 @@ class EPUHarness(object):
         self.CFG = bootstrap.configure(config_files)
 
         self.logdir = self.CFG.epuharness.logdir
-        self.pidantic_dir = pidantic_dir or self.CFG.epuharness.pidantic_dir
+        self.pidantic_dir = (pidantic_dir or
+                os.environ.get('EPUHARNESS_PERSISTENCE_DIR') or
+                self.CFG.epuharness.pidantic_dir)
         self.exchange = exchange or self.CFG.server.amqp.get('exchange', None) or str(uuid.uuid4())
         self.CFG.server.amqp.exchange = self.exchange
         self.dashi = bootstrap.dashi_connect(self.CFG.dashi.topic, self.CFG, amqp_uri=amqp_uri)
