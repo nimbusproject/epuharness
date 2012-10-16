@@ -5,7 +5,7 @@ SQLAlchemy==0.7.6
 apache-libcloud==0.8.0
 -e git+git://github.com/nimbusproject/ceiclient.git#egg=ceiclient
 -e git+git://github.com/nimbusproject/cloudinit.d.git#egg=cloudinitd
-dashi==0.1.0
+dashi==0.2.0
 -e git+git://github.com/nimbusproject/eeagent.git#egg=eeagent
 -e git+git://github.com/ooici/epu.git#egg=epu
 -e git+git://github.com/nimbusproject/epuharness.git#egg=epuharness
