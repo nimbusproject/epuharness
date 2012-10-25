@@ -26,11 +26,13 @@ class TestEPUHarness(object):
 
         ee_name = "testeeagent"
         pd_name = "testpd"
+        node_name = "somenode"
         launch_type = "fork"
 
         assert not self.epuharness.factory.reload_instances()
 
-        self.epuharness._start_eeagent(ee_name, pd_name, launch_type, exe_name="echo")
+        self.epuharness._start_eeagent(ee_name, pd_name, node_name,
+                launch_type, exe_name="echo")
         assert len(self.epuharness.factory.reload_instances()) == 1
 
     def test_announce_node(self):
