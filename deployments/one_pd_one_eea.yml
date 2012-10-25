@@ -9,7 +9,7 @@ process-dispatchers:
             base_need: 1
 nodes:
   nodeone:
-    dt: eeagent
+    engine: default
     process-dispatcher: pd_0
     eeagents:
       eeagent_nodeone:

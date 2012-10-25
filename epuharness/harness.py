@@ -14,6 +14,7 @@ from pidantic.supd.pidsupd import SupDPidanticFactory
 from pidantic.state_machine import PIDanticState
 from epu.states import InstanceState
 from epu.dashiproc.processdispatcher import ProcessDispatcherClient
+from epu.processdispatcher.engines import domain_id_from_engine
 
 from util import get_config_paths
 from deployment import parse_deployment, DEFAULT_DEPLOYMENT
@@ -166,13 +167,13 @@ class EPUHarness(object):
                     node_name)
                 raise DeploymentDescriptionError(msg)
 
-            self.announce_node(node_name, node.get('dt', ''),
+            self.announce_node(node_name, node.get('engine', 'default'),
                     node['process-dispatcher'])
 
             for eeagent_name, eeagent in node.get('eeagents', {}).iteritems():
                 dispatcher = eeagent.get('process-dispatcher') or \
                         node.get('process-dispatcher', '')
-                self._start_eeagent(eeagent_name, dispatcher,
+                self._start_eeagent(eeagent_name, dispatcher, node_name,
                         eeagent['launch_type'],
                         pyon_directory=eeagent.get('pyon_directory'),
                         logfile=eeagent.get('logfile'),
@@ -190,12 +191,13 @@ class EPUHarness(object):
         pyon_nodes = deployment.get('pyon-nodes', {})
         for node_name, node in pyon_nodes.iteritems():
             # TODO when Pyon PD is ready
-            self.announce_node(node_name, node.get('dt', ''),
+            self.announce_node(node_name, node.get('engine', 'default'),
                     node['process-dispatcher'])
 
             for eeagent_name, eeagent in node.get('eeagents', {}).iteritems():
                 config = eeagent.get('config', {})
-                self._start_pyon_eeagent(name=eeagent_name, config=config)
+                self._start_pyon_eeagent(name=eeagent_name,
+                        node_name=node_name, config=config)
 
         # Start Phantom
         self.phantom_instances = deployment.get('phantom-instances', {})
@@ -568,7 +570,7 @@ class EPUHarness(object):
 
         return config_filename
 
-    def _start_eeagent(self, name, process_dispatcher, launch_type,
+    def _start_eeagent(self, name, process_dispatcher, node_name, launch_type,
             pyon_directory=None, logfile=None, exe_name="eeagent", slots=None,
             system_name=None, supd_directory=None, heartbeat=None):
         """Starts an eeagent with SupervisorD
@@ -576,6 +578,7 @@ class EPUHarness(object):
         @param name: Name of process dispatcher to start
         @param process_dispatcher: The name of the parent Process Dispatcher to
                 connect to
+        @param node_name: node ID to include in heartbeat
         @param launch_type: launch_type of eeagent (fork, supd, or pyon_single)
         @param pyon_directory: location of your pyon installation
         @param logfile: the log file for the eeagent
@@ -587,7 +590,7 @@ class EPUHarness(object):
         log.info("Starting EEAgent '%s'" % name)
 
         config_file = self._build_eeagent_config(self.exchange, name,
-                process_dispatcher, launch_type, pyon_directory,
+                process_dispatcher, node_name, launch_type, pyon_directory,
                 logfile=logfile, slots=slots, supd_directory=supd_directory,
                 system_name=system_name, heartbeat=heartbeat)
         cmd = "%s %s" % (exe_name, config_file)
@@ -596,8 +599,8 @@ class EPUHarness(object):
         pid.start()
 
     def _build_eeagent_config(self, exchange, name, process_dispatcher,
-            launch_type, pyon_directory=None, logfile=None, supd_directory=None,
-            slots=None, system_name=None, heartbeat=None):
+            node_name, launch_type, pyon_directory=None, logfile=None,
+            supd_directory=None, slots=None, system_name=None, heartbeat=None):
         """Builds a yaml config file to feed to the eeagent
 
         @param exchange: the AMQP exchange the service should be on
@@ -605,6 +608,7 @@ class EPUHarness(object):
                 on AMQP
         @param process_dispatcher: the name of the parent Process Dispatcher to
                 connect to
+        @param node_name: node ID to include in heartbeat
         @param launch_type: launch_type of eeagent (fork, supd, or pyon_single)
         @param logfile: the log file for the eeagent
         @param slots: the number of slots available for processes
@@ -643,6 +647,7 @@ class EPUHarness(object):
             'name': name,
             'slots': slots,
             'heartbeat': heartbeat,
+            'node_id': node_name,
             'launch_type': {
               'name': launch_type,
               'supd_directory': supd_directory,
@@ -680,12 +685,12 @@ class EPUHarness(object):
 
         return config_filename
 
-    def announce_node(self, node_name, deployable_type, process_dispatcher,
+    def announce_node(self, node_name, engine, process_dispatcher,
             state=None):
         """Announce a node to each process dispatcher.
 
         @param node_name: the name of the node to advertise
-        @param deployable_type: the deployable type of the node
+        @param engine: the execution engine of the node
         @param process_dispatcher: the pd to announce to
         @param state: the state to advertise to the pd
         """
@@ -693,12 +698,12 @@ class EPUHarness(object):
             state = InstanceState.RUNNING
 
         pd_client = ProcessDispatcherClient(self.dashi, process_dispatcher)
-        log.info("Announcing %s of type %s is '%s' to %s" % (node_name,
-            deployable_type, state, process_dispatcher))
-
+        log.info("Announcing %s of engine %s is '%s' to %s" % (node_name,
+            engine, state, process_dispatcher))
+        domain_id = domain_id_from_engine(engine)
         for i in range(1, ADVERTISE_RETRIES):
             try:
-                pd_client.dt_state(node_name, deployable_type, state)
+                pd_client.node_state(node_name, domain_id, state)
                 break
             except timeout:
                 wait_time = i * i  # Exponentially increasing wait
@@ -763,6 +768,7 @@ class EPUHarness(object):
         default = {
             'eeagent': {
                 'name': "eeagent_%s" % node_name,
+                'node_id': node_name,
                 'heartbeat': 10,
                 'slots': 80,
                 'launch_type': {
