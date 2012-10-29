@@ -236,6 +236,7 @@ class EPUHarness(object):
             pw_file_contents += "%s\n%s\n" % (user.get('user', ''), user.get('password', ''))
 
         (os_handle, pw_filename) = tempfile.mkstemp()
+        os.close(os_handle)
         with open(pw_filename, "w") as pw_f:
             pw_f.write(pw_file_contents)
 
@@ -269,6 +270,7 @@ class EPUHarness(object):
         config_yaml = yaml.dump(merged_config)
 
         (os_handle, config_filename) = tempfile.mkstemp(suffix='.yml')
+        os.close(os_handle)
         with open(config_filename, "w") as config_f:
             config_f.write(config_yaml)
 
@@ -340,6 +342,7 @@ class EPUHarness(object):
         config_yaml = yaml.dump(merged_config)
 
         (os_handle, config_filename) = tempfile.mkstemp(suffix='.yml')
+        os.close(os_handle)
         with open(config_filename, "w") as config_f:
             config_f.write(config_yaml)
 
@@ -415,6 +418,7 @@ class EPUHarness(object):
         config_yaml = yaml.dump(merged_config)
 
         (os_handle, config_filename) = tempfile.mkstemp(suffix='.yml')
+        os.close(os_handle)
         with open(config_filename, "w") as config_f:
             config_f.write(config_yaml)
 
@@ -485,6 +489,7 @@ class EPUHarness(object):
         config_yaml = yaml.dump(merged_config)
 
         (os_handle, config_filename) = tempfile.mkstemp(suffix='.yml')
+        os.close(os_handle)
         with open(config_filename, "w") as config_f:
             config_f.write(config_yaml)
 
@@ -565,6 +570,7 @@ class EPUHarness(object):
         config_yaml = yaml.dump(merged_config)
 
         (os_handle, config_filename) = tempfile.mkstemp(prefix="%s_" % name, suffix='.yml')
+        os.close(os_handle)
         with open(config_filename, "w") as config_f:
             config_f.write(config_yaml)
 
@@ -680,6 +686,7 @@ class EPUHarness(object):
         config_yaml = yaml.dump(config)
 
         (os_handle, config_filename) = tempfile.mkstemp(suffix='.yml')
+        os.close(os_handle)
         with open(config_filename, "w") as config_f:
             config_f.write(config_yaml)
 
@@ -817,6 +824,7 @@ class EPUHarness(object):
         rel_yaml = yaml.dump(rel)
 
         (os_handle, rel_filename) = tempfile.mkstemp(suffix='.yml')
+        os.close(os_handle)
         with open(rel_filename, "w") as rel_f:
             rel_f.write(rel_yaml)
 

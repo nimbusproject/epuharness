@@ -1,3 +1,4 @@
+import os
 import tempfile
 from socket import timeout
 
@@ -105,7 +106,8 @@ class TestFixture(object):
         Also creates an instance of the MockEC2NodeDriver for convenience
         """
         from epu.mocklibcloud import MockEC2NodeDriver
-        _, self.fake_libcloud_db = tempfile.mkstemp()
+        fh, self.fake_libcloud_db = tempfile.mkstemp()
+        os.close(fh)
         site_name = 'ec2-fake'
         fake_site = {
             'name': site_name,
