@@ -113,6 +113,9 @@ class EPUHarness(object):
             self.factory.terminate()
             shutil.rmtree(self.pidantic_dir)
 
+        self.dashi.cancel()
+        self.dashi.disconnect()
+
     def start(self, deployment_file=None, deployment_str=None):
         """Start services defined in the deployment file provided. If a
         deployment file isn't provided, then start a standard set of one
