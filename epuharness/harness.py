@@ -45,12 +45,17 @@ class EPUHarness(object):
         self.dashi = bootstrap.dashi_connect(self.CFG.dashi.topic, self.CFG, amqp_uri=amqp_uri)
         self.amqp_cfg = dict(self.CFG.server.amqp)
 
+        self.factory = None
+
     def _setup_factory(self):
+
+        if self.factory:
+            return
 
         try:
             self.factory = SupDPidanticFactory(directory=self.pidantic_dir,
                     name="epu-harness")
-        except:
+        except Exception:
             log.debug("Problem Connecting to SupervisorD", exc_info=True)
             raise HarnessException("Could not connect to supervisord. Was epu-harness started?")
 
