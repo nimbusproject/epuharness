@@ -1,6 +1,7 @@
 import os
 import tempfile
 from socket import timeout
+import logging
 
 from epu.dashiproc.processdispatcher import ProcessDispatcherClient
 from epu.dashiproc.dtrs import DTRSClient
@@ -9,12 +10,48 @@ from epu.dashiproc.epumanagement import EPUManagementClient
 from eeagent.client import EEAgentClient
 
 from epuharness.deployment import parse_deployment
+from epuharness.harness import EPUHarness
+
+log = logging.getLogger(__name__)
 
 class TestFixture(object):
     """A mixin to provide some helper methods to test classes
     """
-
+    epuh_persistence = "/tmp/SupD/epuharness"
     epuharness = None
+    libcloud_drivers = None
+    dashi = None
+
+
+    def setup_harness(self, *args, **kwargs):
+        if os.path.exists(self.epuh_persistence):
+            raise SkipTest("EPUHarness running. Can't run this test")
+
+        self.epuharness = EPUHarness(*args, **kwargs)
+        self.dashi = self.epuharness.dashi
+
+    def teardown_harness(self):
+        if self.epuharness:
+            try:
+                self.epuharness.stop()
+            except Exception:
+                log.exception("Error shutting down epuharness!")
+
+        if self.libcloud_drivers:
+            for site_name, driver in self.libcloud_drivers.iteritems():
+                try:
+                    driver.shutdown()
+                except Exception:
+                    log.exception("Error shutting down libcloud driver for site %s", site_name)
+
+                try:
+                    if driver.sqlite_db:
+                        os.remove(driver.sqlite_db)
+                except Exception:
+                    log.exception("Error removing fake libcloud db: %s", driver.sqlite_db)
+
+
+    cleanup_harness = teardown_harness
 
     def get_clients(self, deployment_str, dashi):
         """returns a dictionary of epu clients, indexed by their topic name
@@ -100,23 +137,33 @@ class TestFixture(object):
                 msg = "Wasn't able to call %s.%s" % fn_to_block_on.__name__
             assert False, msg
 
-    def make_fake_libcloud_site(self):
-        """makes a fake libcloud site, and returns handles to the various parts
+    def make_fake_libcloud_site(self, site_name="ec2-fake"):
+        """makes a fake libcloud site and driver.
 
-        Also creates an instance of the MockEC2NodeDriver for convenience
+        Returns tuple of the site definition, and a libcloud driver instance
         """
-        from epu.mocklibcloud import MockEC2NodeDriver
-        fh, self.fake_libcloud_db = tempfile.mkstemp()
-        os.close(fh)
-        site_name = 'ec2-fake'
+        if self.libcloud_drivers is None:
+            self.libcloud_drivers = {}
+
+        if site_name in self.libcloud_drivers:
+            driver = self.libcloud_drivers[site_name]
+
+        else:
+            fh, fake_libcloud_db = tempfile.mkstemp(prefix="fakelibcloud_db")
+            os.close(fh)
+
+            from epu.mocklibcloud import MockEC2NodeDriver
+            driver = MockEC2NodeDriver(sqlite_db=fake_libcloud_db)
+            self.libcloud_drivers[site_name] = driver
+
+
         fake_site = {
             'name': site_name,
             'description': 'Fake EC2',
             'driver_class': 'epu.mocklibcloud.MockEC2NodeDriver',
             'driver_kwargs': {
-                'sqlite_db': self.fake_libcloud_db
+                'sqlite_db': driver.sqlite_db
             }
         }
-        self.libcloud = MockEC2NodeDriver(sqlite_db=self.fake_libcloud_db)
 
-        return fake_site
+        return fake_site, driver
