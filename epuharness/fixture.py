@@ -25,7 +25,7 @@ class TestFixture(object):
 
     def setup_harness(self, *args, **kwargs):
         if os.path.exists(self.epuh_persistence):
-            raise SkipTest("EPUHarness running. Can't run this test")
+            raise Exception("EPUHarness running. Can't run this test")
 
         self.epuharness = EPUHarness(*args, **kwargs)
         self.dashi = self.epuharness.dashi
