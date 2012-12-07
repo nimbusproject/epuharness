@@ -39,7 +39,7 @@ setupdict['packages'] = find_packages()
 
 setupdict['dependency_links'] = [
     'https://github.com/ooici/epu/tarball/master#egg=epu-1.3.0',
-    'https://github.com/nimbusproject/dashi/tarball/master#egg=dashi-0.2',
+    'https://github.com/nimbusproject/dashi/tarball/master#egg=dashi-0.2.1',
     'https://github.com/nimbusproject/pidantic/tarball/master#egg=pidantic-0.2',
     'https://github.com/nimbusproject/eeagent/tarball/master#egg=eeagent-0.2',
     'https://github.com/nimbusproject/ceiclient/tarball/master#egg=ceiclient-0.2',
