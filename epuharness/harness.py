@@ -46,6 +46,7 @@ class EPUHarness(object):
         self.amqp_cfg = dict(self.CFG.server.amqp)
 
         self.factory = None
+        self.savelogs_dir = None
 
     def _setup_factory(self):
 
@@ -81,7 +82,21 @@ class EPUHarness(object):
         else:
             return status
 
-    def stop(self, services=None, force=False, remove_dir=True, print_logs=False):
+    def get_logfiles(self):
+        """Returns a list of logfile paths relevant to epuharness instance
+        """
+        # pretty hacky. we could get these over the supd API instead.
+        # but that's certainly slower and not really better.
+        pidantic_dir = os.path.abspath(self.pidantic_dir)
+        epuharness_dir = os.path.join(pidantic_dir, "epu-harness")
+
+        logfiles = []
+        for f in os.listdir(epuharness_dir):
+            if os.path.splitext(f)[1].lower() == ".log":
+                logfiles.append(os.path.join(epuharness_dir, f))
+        return logfiles
+
+    def stop(self, services=None, force=False, remove_dir=True):
         """Stop services that were previously started by epuharness
 
         @param force: When False raises an exception when there is something
@@ -115,12 +130,11 @@ class EPUHarness(object):
                 instance.cleanup()
 
         if cleanup:
-
-            if print_logs:
+            if self.savelogs_dir:
                 try:
-                    self._print_logs()
+                    self._save_logs(self.savelogs_dir)
                 except Exception:
-                    log.exception("Problem printing logs. Proceeding.")
+                    log.exception("Problem saving logs. Proceeding.")
 
             self.factory.terminate()
             if remove_dir:
@@ -129,19 +143,14 @@ class EPUHarness(object):
         self.dashi.cancel()
         self.dashi.disconnect()
 
-    def _print_logs(self):
-        # pretty hacky. we could get these over the supd API instead.
-        # but that's certainly slower and not really better.
-        epuharness_dir = os.path.join(self.pidantic_dir, "epu-harness")
-        for f in os.listdir(epuharness_dir):
-            if os.path.splitext(f)[1].lower() == ".log":
-                try:
-                    with file(os.path.join(epuharness_dir, f)) as logfile:
-                        print "\n===== %s %s" % (f, "=" * max(72 - len(f), 0))
-                        shutil.copyfileobj(logfile, sys.stdout)
-                        print "=" * 79
-                except Exception:
-                    log.exception("Error printing logfile %s", f)
+    def _save_logs(self, output_dir):
+        for logfile in self.get_logfiles():
+            basename = os.path.basename(logfile)
+            dest_path = os.path.join(output_dir, basename)
+            try:
+                shutil.copy2(logfile, dest_path)
+            except Exception:
+                log.exception("Error copying logfile %s", logfile)
 
     def start(self, deployment_file=None, deployment_str=None):
         """Start services defined in the deployment file provided. If a
@@ -235,6 +244,33 @@ class EPUHarness(object):
             port = phantom.get('port')
             users = phantom.get('users', [])
             self._start_phantom(phantom_name, phantom.get('config', {}), users, port=port)
+
+        self.savelogs_dir = self._get_savelogs_dir()
+        if self.savelogs_dir:
+
+            # by printing out this funny format, Jenkins will pick up these
+            # files and include them in the test results UI as attachments.
+            # Note that we print out the path the file will be COPIED to when
+            # the harness is stopped. We can't just wait and print it out when
+            # we actually copy it because that happens during tearDown, output
+            # from which is apparently difficult for nose to capture.
+            for logfile in self.get_logfiles():
+                basename = os.path.basename(logfile)
+                print "[[ATTACHMENT|%s]]" % os.path.join(self.savelogs_dir, basename)
+
+    def _get_savelogs_dir(self):
+        savelogs_dir = os.environ.get("EPUHARNESS_SAVELOGS_DIR")
+        if savelogs_dir and not os.path.exists(savelogs_dir):
+            log.warn("savelogs directory doesn't exist: %s", savelogs_dir)
+            savelogs_dir = None
+
+        if savelogs_dir:
+            savelogs_dir = os.path.abspath(savelogs_dir)
+            # create a subdirectory just for this harness
+            prefix = "test"
+            savelogs_dir = tempfile.mkdtemp(prefix=prefix, dir=savelogs_dir)
+
+        return savelogs_dir
 
     def _start_phantom(self, name, config, users, port=None, exe_name='phantomcherrypy'):
 

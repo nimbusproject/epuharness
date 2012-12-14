@@ -14,6 +14,7 @@ from epuharness.harness import EPUHarness
 
 log = logging.getLogger(__name__)
 
+
 class TestFixture(object):
     """A mixin to provide some helper methods to test classes
     """
@@ -21,7 +22,6 @@ class TestFixture(object):
     epuharness = None
     libcloud_drivers = None
     dashi = None
-
 
     def setup_harness(self, *args, **kwargs):
         if os.path.exists(self.epuh_persistence):
@@ -33,7 +33,7 @@ class TestFixture(object):
     def teardown_harness(self, remove_dir=True):
         if self.epuharness:
             try:
-                self.epuharness.stop(remove_dir=remove_dir, print_logs=True)
+                self.epuharness.stop(remove_dir=remove_dir)
             except Exception:
                 log.exception("Error shutting down epuharness!")
 
@@ -49,7 +49,6 @@ class TestFixture(object):
                         os.remove(driver.sqlite_db)
                 except Exception:
                     log.exception("Error removing fake libcloud db: %s", driver.sqlite_db)
-
 
     cleanup_harness = teardown_harness
 
