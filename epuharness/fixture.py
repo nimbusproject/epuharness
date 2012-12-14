@@ -30,10 +30,10 @@ class TestFixture(object):
         self.epuharness = EPUHarness(*args, **kwargs)
         self.dashi = self.epuharness.dashi
 
-    def teardown_harness(self):
+    def teardown_harness(self, remove_dir=True):
         if self.epuharness:
             try:
-                self.epuharness.stop()
+                self.epuharness.stop(remove_dir=remove_dir, print_logs=True)
             except Exception:
                 log.exception("Error shutting down epuharness!")
 
@@ -88,7 +88,7 @@ class TestFixture(object):
     def block_until_ready(self, deployment_str, dashi):
         """Blocks until all of the services in a deployment are contacted
         """
-        
+
         deployment = parse_deployment(yaml_str=deployment_str)
 
         for provisioner_name in deployment.get('provisioners', {}).iterkeys():

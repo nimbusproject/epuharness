@@ -81,7 +81,7 @@ class EPUHarness(object):
         else:
             return status
 
-    def stop(self, services=None, force=False):
+    def stop(self, services=None, force=False, remove_dir=True, print_logs=False):
         """Stop services that were previously started by epuharness
 
         @param force: When False raises an exception when there is something
@@ -115,11 +115,33 @@ class EPUHarness(object):
                 instance.cleanup()
 
         if cleanup:
+
+            if print_logs:
+                try:
+                    self._print_logs()
+                except Exception:
+                    log.exception("Problem printing logs. Proceeding.")
+
             self.factory.terminate()
-            shutil.rmtree(self.pidantic_dir)
+            if remove_dir:
+                shutil.rmtree(self.pidantic_dir)
 
         self.dashi.cancel()
         self.dashi.disconnect()
+
+    def _print_logs(self):
+        # pretty hacky. we could get these over the supd API instead.
+        # but that's certainly slower and not really better.
+        epuharness_dir = os.path.join(self.pidantic_dir, "epu-harness")
+        for f in os.listdir(epuharness_dir):
+            if os.path.splitext(f)[1].lower() == ".log":
+                try:
+                    with file(os.path.join(epuharness_dir, f)) as logfile:
+                        print "\n===== %s %s" % (f, "=" * max(72 - len(f), 0))
+                        shutil.copyfileobj(logfile, sys.stdout)
+                        print "=" * 79
+                except Exception:
+                    log.exception("Error printing logfile %s", f)
 
     def start(self, deployment_file=None, deployment_str=None):
         """Start services defined in the deployment file provided. If a
