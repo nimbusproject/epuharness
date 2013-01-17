@@ -28,12 +28,14 @@ def main(argv=None):
     parser.add_argument('-c', '--config', metavar='CONFIG_FILE', default=None)
     parser.add_argument('-x', '--exchange', metavar='EXCHANGE_NAME',
             default=None)
+    parser.add_argument('-s', '--sysname', metavar='SYSNAME',
+            default=None)
     parser.add_argument('action', metavar='ACTION', help='start or stop')
     parser.add_argument('extras', help='deployment config file for start, or services to stop',
             default=[], nargs='*')
     args = parser.parse_args(argv)
 
-    epuharness = EPUHarness(exchange=args.exchange, config=args.config)
+    epuharness = EPUHarness(exchange=args.exchange, config=args.config, sysname=args.sysname)
 
     action = args.action.lower()
     if action == 'start':

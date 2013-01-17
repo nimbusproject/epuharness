@@ -28,13 +28,14 @@ class EPUHarness(object):
     """EPUHarness. Sets up Process Dispatchers and EEAgents for testing.
     """
 
-    def __init__(self, exchange=None, pidantic_dir=None, amqp_uri=None, config=None):
+    def __init__(self, exchange=None, pidantic_dir=None, amqp_uri=None, config=None, sysname=None):
 
         configs = ["epuharness"]
         config_files = get_config_paths(configs)
         if config:
             config_files.append(config)
         self.CFG = bootstrap.configure(config_files)
+        self.sysname = sysname
 
         self.logdir = self.CFG.epuharness.logdir
         self.pidantic_dir = (pidantic_dir or
@@ -42,6 +43,7 @@ class EPUHarness(object):
                 self.CFG.epuharness.pidantic_dir)
         self.exchange = exchange or self.CFG.server.amqp.get('exchange', None) or str(uuid.uuid4())
         self.CFG.server.amqp.exchange = self.exchange
+        self.CFG.dashi.sysname = sysname
         self.dashi = bootstrap.dashi_connect(self.CFG.dashi.topic, self.CFG, amqp_uri=amqp_uri)
         self.amqp_cfg = dict(self.CFG.server.amqp)
 
