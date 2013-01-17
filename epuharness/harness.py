@@ -123,7 +123,17 @@ class EPUHarness(object):
                     # Clean up config files
                     command = instance._program_object.command
                     command = command.split()
-                    [os.remove(config) for config in command if config.endswith('.yml')]
+                    for config in command:
+                        if config.endswith('.yml'):
+                            _cf = yaml.load(config)
+                            with open(_cf) as cf:
+                                cfg = yaml.load(cf)
+                                try:
+                                    persistence = cfg['apps'][0]['config']['eeagent']['launch_type']['persistence_directory']
+                                    shutil.rmtree(persistence)
+                                except Exception:
+                                    pass
+                            os.remove(config)
                 except Exception, e:
                     # Perhaps instance internals have changed
                     log.warning("Couldn't delete temporary config files: %s" % e)
