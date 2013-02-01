@@ -839,6 +839,10 @@ class EPUHarness(object):
 
         updated_config = self._build_pyon_eeagent_config(node_name, config)
 
+        persistence_directory = updated_config['eeagent']['launch_type'].get('persistence_directory')
+        if persistence_directory:
+            os.makedirs(persistence_directory)
+
         pyon_directory = updated_config['eeagent']['launch_type'].get('pyon_directory')
         sysname = updated_config.get('system', {}).get('name')
 
