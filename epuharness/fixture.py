@@ -155,12 +155,8 @@ class TestFixture(object):
             self.libcloud_drivers[site_name] = driver
 
         fake_site = {
-            'name': site_name,
-            'description': 'Fake EC2',
-            'driver_class': 'epu.mocklibcloud.MockEC2NodeDriver',
-            'driver_kwargs': {
-                'sqlite_db': driver.sqlite_db
-            }
+            'type': 'mock-ec2',
+            'sqlite_db': driver.sqlite_db
         }
 
         return fake_site, driver
