@@ -44,7 +44,7 @@ class EPUHarness(object):
         self.exchange = exchange or self.CFG.server.amqp.get('exchange', None) or str(uuid.uuid4())
         self.CFG.server.amqp.exchange = self.exchange
         self.CFG.dashi.sysname = sysname
-        self.dashi = bootstrap.dashi_connect(self.CFG.dashi.topic, self.CFG, amqp_uri=amqp_uri)
+        self.dashi = bootstrap.dashi_connect(self.CFG.dashi.topic, self.CFG, amqp_uri=amqp_uri, sysname=sysname)
         self.amqp_cfg = dict(self.CFG.server.amqp)
 
         self.factory = None
@@ -391,6 +391,8 @@ class EPUHarness(object):
               'exchange': exchange
             }
           },
+          'dashi': {
+          },
           'epumanagement': {
             'service_name': name,
           },
@@ -414,6 +416,9 @@ class EPUHarness(object):
 
         if proc_name:
             default['epumanagement']['proc_name'] = proc_name
+
+        if self.sysname:
+            default['dashi']['sysname'] = self.sysname
 
         merged_config = dict_merge(default, config)
 
@@ -463,6 +468,8 @@ class EPUHarness(object):
               'exchange': exchange
             }
           },
+          'dashi': {
+          },
           'provisioner': {
             'service_name': name,
           },
@@ -485,6 +492,9 @@ class EPUHarness(object):
 
         if proc_name:
             default['provisioner']['proc_name'] = proc_name
+
+        if self.sysname:
+            default['dashi']['sysname'] = self.sysname
 
         dt_path = config.get('provisioner', {}).get('dt_path', None)
         if not dt_path:
@@ -538,6 +548,8 @@ class EPUHarness(object):
               'exchange': exchange
             }
           },
+          'dashi': {
+          },
           'dtrs': {
             'service_name': name
           },
@@ -560,6 +572,9 @@ class EPUHarness(object):
 
         if proc_name:
             default['dtrs']['proc_name'] = proc_name
+
+        if self.sysname:
+            default['dashi']['sysname'] = self.sysname
 
 
         merged_config = dict_merge(default, config)
@@ -621,6 +636,8 @@ class EPUHarness(object):
           'server': {
             'amqp': self.amqp_cfg,
           },
+          'dashi': {
+          },
           'processdispatcher': {
             'service_name': name,
             'static_resources': static_resources,
@@ -642,6 +659,9 @@ class EPUHarness(object):
           }
         }
         default['server']['amqp']['exchange'] = exchange
+
+        if self.sysname:
+            default['dashi']['sysname'] = self.sysname
 
         merged_config = dict_merge(default, config)
 
@@ -727,6 +747,8 @@ class EPUHarness(object):
           'server': {
             'amqp': self.amqp_cfg,
           },
+          'dashi': {
+          },
           'eeagent': {
             'name': name,
             'slots': slots,
@@ -760,6 +782,9 @@ class EPUHarness(object):
           }
         }
         config['server']['amqp']['exchange'] = exchange
+
+        if self.sysname:
+            config['dashi']['sysname'] = self.sysname
 
         config_yaml = yaml.dump(config)
 
