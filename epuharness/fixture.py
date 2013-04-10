@@ -18,16 +18,16 @@ log = logging.getLogger(__name__)
 class TestFixture(object):
     """A mixin to provide some helper methods to test classes
     """
-    epuh_persistence = "/tmp/SupD/epuharness"
     epuharness = None
     libcloud_drivers = None
     dashi = None
 
     def setup_harness(self, *args, **kwargs):
-        if os.path.exists(self.epuh_persistence):
-            raise Exception("EPUHarness running. Can't run this test")
 
         self.epuharness = EPUHarness(*args, **kwargs)
+        if os.path.exists(self.epuharness.pidantic_dir):
+            raise Exception("EPUHarness running. Can't run this test")
+
         self.dashi = self.epuharness.dashi
 
     def teardown_harness(self, remove_dir=True):
@@ -102,7 +102,7 @@ class TestFixture(object):
             for eeagent_name in node.get('eeagents', {}).iterkeys():
                 eeagent = EEAgentClient(dashi=dashi, ee_name=eeagent_name,
                         handle_heartbeat=False)
-                self._block_on_call(eeagent.dump, kwargs={'rpc':True})
+                self._block_on_call(eeagent.dump, kwargs={'rpc': True})
 
         for pd_name in deployment.get('process-dispatchers', {}).iterkeys():
             pd = ProcessDispatcherClient(dashi, pd_name)
@@ -111,7 +111,6 @@ class TestFixture(object):
         for dt_name in deployment.get('dt_registries', {}).iterkeys():
             dtrs = DTRSClient(dashi, topic=dt_name)
             self._block_on_call(dtrs.list_sites)
-
 
     def _block_on_call(self, fn_to_block_on, attempts=None, kwargs={}):
         if not attempts:
@@ -130,9 +129,9 @@ class TestFixture(object):
         else:
             try:
                 msg = "Wasn't able to call %s.%s" % (
-                        fn_to_block_on.im_class.__name__,
-                        fn_to_block_on.__name__)
-            except AttributeError: #Not a member of a class
+                    fn_to_block_on.im_class.__name__,
+                    fn_to_block_on.__name__)
+            except AttributeError:  # Not a member of a class
                 msg = "Wasn't able to call %s.%s" % fn_to_block_on.__name__
             assert False, msg
 
@@ -154,7 +153,6 @@ class TestFixture(object):
             from epu.mocklibcloud import MockEC2NodeDriver
             driver = MockEC2NodeDriver(sqlite_db=fake_libcloud_db)
             self.libcloud_drivers[site_name] = driver
-
 
         fake_site = {
             'name': site_name,
