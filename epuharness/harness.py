@@ -121,25 +121,9 @@ class EPUHarness(object):
             instances_to_kill = filter(lambda x: x.startswith(service), instances.keys())
             for instance_name in instances_to_kill:
                 instance = instances[instance_name]
-                try:
-                    # Clean up config files
-                    command = instance._program_object.command
-                    command = command.split()
-                    for config in command:
-                        if config.endswith('.yml'):
-                            _cf = yaml.load(config)
-                            with open(_cf) as cf:
-                                cfg = yaml.load(cf)
-                                try:
-                                    persistence = cfg['apps'][0]['config']['eeagent']['launch_type']['persistence_directory']
-                                    shutil.rmtree(persistence)
-                                except Exception:
-                                    pass
-                            os.remove(config)
-                except Exception, e:
-                    # Perhaps instance internals have changed
-                    log.warning("Couldn't delete temporary config files: %s" % e)
-                instance.cleanup()
+                self._clean_instance_config(instance)
+                if not cleanup:
+                    instance.cleanup()
 
         if cleanup:
             if self.savelogs_dir:
@@ -164,6 +148,26 @@ class EPUHarness(object):
             except Exception:
                 log.exception("Error copying logfile %s", logfile)
 
+    def _clean_instance_config(self, instance):
+        try:
+            # Clean up config files
+            command = instance._program_object.command
+            command = command.split()
+            for config in command:
+                if config.endswith('.yml'):
+                    _cf = yaml.load(config)
+                    with open(_cf) as cf:
+                        cfg = yaml.load(cf)
+                        try:
+                            persistence = cfg['apps'][0]['config']['eeagent']['launch_type']['persistence_directory']
+                            shutil.rmtree(persistence)
+                        except Exception:
+                            pass
+                    os.remove(config)
+        except Exception, e:
+            # Perhaps instance internals have changed
+            log.warning("Couldn't delete temporary config files: %s" % e)
+
     def start(self, deployment_file=None, deployment_str=None):
         """Start services defined in the deployment file provided. If a
         deployment file isn't provided, then start a standard set of one
@@ -178,7 +182,8 @@ class EPUHarness(object):
             os.makedirs(self.pidantic_dir)
         except OSError:
             log.debug("Problem making pidantic dir", exc_info=True)
-            raise HarnessException("epu-harness's persistance directory %s is present. Remove it before proceeding" % self.pidantic_dir)
+            msg = "epu-harness's persistance directory %s is present. Remove it before proceeding" % self.pidantic_dir
+            raise HarnessException(msg)
 
         self._setup_factory()
 
@@ -213,7 +218,7 @@ class EPUHarness(object):
         nodes = deployment.get('nodes', {})
         for node_name, node in nodes.iteritems():
 
-            if not node.has_key('process-dispatcher'):
+            if 'process-dispatcher' not in node:
                 msg = "No process-dispatcher specified for node '%s'" % (
                     node_name)
                 raise DeploymentDescriptionError(msg)
@@ -223,15 +228,15 @@ class EPUHarness(object):
 
             for eeagent_name, eeagent in node.get('eeagents', {}).iteritems():
                 dispatcher = eeagent.get('process-dispatcher') or \
-                        node.get('process-dispatcher', '')
+                    node.get('process-dispatcher', '')
                 self._start_eeagent(eeagent_name, dispatcher, node_name,
-                        eeagent['launch_type'],
-                        pyon_directory=eeagent.get('pyon_directory'),
-                        logfile=eeagent.get('logfile'),
-                        slots=eeagent.get('slots'),
-                        system_name=eeagent.get('system_name'),
-                        supd_directory=os.path.join(self.pidantic_dir, eeagent_name),
-                        heartbeat=eeagent.get('heartbeat'))
+                    eeagent['launch_type'],
+                    pyon_directory=eeagent.get('pyon_directory'),
+                    logfile=eeagent.get('logfile'),
+                    slots=eeagent.get('slots'),
+                    system_name=eeagent.get('system_name'),
+                    supd_directory=os.path.join(self.pidantic_dir, eeagent_name),
+                    heartbeat=eeagent.get('heartbeat'))
 
         # Start Pyon Process Dispatchers
         self.pyon_process_dispatchers = deployment.get('pyon-process-dispatchers', {})
@@ -326,21 +331,21 @@ class EPUHarness(object):
             logfile = os.path.join(self.logdir, "%s.log" % name)
 
         default = {
-          'phantom': {
-            'system': {
-              'type': 'epu',
-              'broker': 'localhost',
-              'broker_port': 5672,
-              'broker_ssl': 'False',
-              'rabbit_user': 'guest',
-              'rabbit_pw': 'guest',
-              'rabbit_exchange': exchange
-            },
-            'authz': {
-              'type': 'simple_file',
-              'filename': authz_file
+            'phantom': {
+                'system': {
+                    'type': 'epu',
+                    'broker': 'localhost',
+                    'broker_port': 5672,
+                    'broker_ssl': 'False',
+                    'rabbit_user': 'guest',
+                    'rabbit_pw': 'guest',
+                    'rabbit_exchange': exchange
+                },
+                'authz': {
+                    'type': 'simple_file',
+                    'filename': authz_file
+                }
             }
-          }
         }
 
         merged_config = dict_merge(default, config)
@@ -386,32 +391,31 @@ class EPUHarness(object):
             logfile = os.path.join(self.logdir, "%s%s.log" % (name, instance_tag))
 
         default = {
-          'server': {
-            'amqp': {
-              'exchange': exchange
-            }
-          },
-          'dashi': {
-          },
-          'epumanagement': {
-            'service_name': name,
-          },
-          'logging': {
-            'loggers': {
-              'epumanagement': {
-                'handlers': ['file', 'console']
-              }
+            'server': {
+                'amqp': {
+                    'exchange': exchange
+                }
             },
-            'handlers': {
-              'file': {
-                'filename': logfile,
-              }
+            'dashi': {
             },
-            'root': {
-              'handlers': ['file', 'console']
+            'epumanagement': {
+                'service_name': name,
+            },
+            'logging': {
+                'loggers': {
+                    'epumanagement': {
+                        'handlers': ['file', 'console']
+                    }
+                },
+                'handlers': {
+                    'file': {
+                        'filename': logfile,
+                    }
+                },
+                'root': {
+                    'handlers': ['file', 'console']
+                }
             }
-          }
-
         }
 
         if proc_name:
@@ -444,7 +448,8 @@ class EPUHarness(object):
         replica_count = config.get('replica_count', 1)
         for instance in range(0, replica_count):
             proc_name = "%s-%s" % (name, instance)
-            config_file = self._build_provisioner_config(name, self.exchange, config, instance=instance, proc_name=proc_name)
+            config_file = self._build_provisioner_config(
+                name, self.exchange, config, instance=instance, proc_name=proc_name)
 
             cmd = "%s %s" % (exe_name, config_file)
             log.debug("Running command '%s'" % cmd)
@@ -463,31 +468,31 @@ class EPUHarness(object):
             logfile = os.path.join(self.logdir, "%s%s.log" % (name, instance_tag))
 
         default = {
-          'server': {
-            'amqp': {
-              'exchange': exchange
-            }
-          },
-          'dashi': {
-          },
-          'provisioner': {
-            'service_name': name,
-          },
-          'logging': {
-            'loggers': {
-              'provisioner': {
-                'handlers': ['file', 'console']
-              }
+            'server': {
+                'amqp': {
+                    'exchange': exchange
+                }
             },
-            'handlers': {
-              'file': {
-                'filename': logfile,
-              }
+            'dashi': {
             },
-            'root': {
-              'handlers': ['file', 'console']
+            'provisioner': {
+                'service_name': name,
+            },
+            'logging': {
+                'loggers': {
+                    'provisioner': {
+                        'handlers': ['file', 'console']
+                    }
+                },
+                'handlers': {
+                    'file': {
+                        'filename': logfile,
+                    }
+                },
+                'root': {
+                    'handlers': ['file', 'console']
+                }
             }
-          }
         }
 
         if proc_name:
@@ -543,31 +548,31 @@ class EPUHarness(object):
             logfile = os.path.join(self.logdir, "%s%s.log" % (name, instance_tag))
 
         default = {
-          'server': {
-            'amqp': {
-              'exchange': exchange
-            }
-          },
-          'dashi': {
-          },
-          'dtrs': {
-            'service_name': name
-          },
-          'logging': {
-            'loggers': {
-              'dtrs': {
-                'handlers': ['file', 'console']
-              }
+            'server': {
+                'amqp': {
+                    'exchange': exchange
+                }
             },
-            'handlers': {
-              'file': {
-                'filename': logfile,
-              }
+            'dashi': {
             },
-            'root': {
-              'handlers': ['file', 'console']
+            'dtrs': {
+                'service_name': name
+            },
+            'logging': {
+                'loggers': {
+                    'dtrs': {
+                        'handlers': ['file', 'console']
+                    }
+                },
+                'handlers': {
+                    'file': {
+                        'filename': logfile,
+                    }
+                },
+                'root': {
+                    'handlers': ['file', 'console']
+                }
             }
-          }
         }
 
         if proc_name:
@@ -575,7 +580,6 @@ class EPUHarness(object):
 
         if self.sysname:
             default['dashi']['sysname'] = self.sysname
-
 
         merged_config = dict_merge(default, config)
 
@@ -633,30 +637,30 @@ class EPUHarness(object):
             logfile = os.path.join(self.logdir, "%s%s.log" % (name, instance_tag))
 
         default = {
-          'server': {
-            'amqp': self.amqp_cfg,
-          },
-          'dashi': {
-          },
-          'processdispatcher': {
-            'service_name': name,
-            'static_resources': static_resources,
-          },
-          'logging': {
-            'loggers': {
-              'processdispatcher': {
-                'handlers': ['file', 'console']
-              }
+            'server': {
+                'amqp': self.amqp_cfg,
             },
-            'handlers': {
-              'file': {
-                'filename': logfile,
-              }
+            'dashi': {
             },
-            'root': {
-              'handlers': ['file', 'console']
+            'processdispatcher': {
+                'service_name': name,
+                'static_resources': static_resources,
+            },
+            'logging': {
+                'loggers': {
+                    'processdispatcher': {
+                        'handlers': ['file', 'console']
+                    }
+                },
+                'handlers': {
+                    'file': {
+                        'filename': logfile,
+                    }
+                },
+                'root': {
+                    'handlers': ['file', 'console']
+                }
             }
-          }
         }
         default['server']['amqp']['exchange'] = exchange
 
@@ -744,42 +748,42 @@ class EPUHarness(object):
             log.debug("%s already exists. Continuing.", exc_info=True)
 
         config = {
-          'server': {
-            'amqp': self.amqp_cfg,
-          },
-          'dashi': {
-          },
-          'eeagent': {
-            'name': name,
-            'slots': slots,
-            'heartbeat': heartbeat,
-            'node_id': node_name,
-            'launch_type': {
-              'name': launch_type,
-              'supd_directory': supd_directory,
-              'container_args': container_args,
-              'pyon_directory': pyon_directory
+            'server': {
+                'amqp': self.amqp_cfg,
             },
-          },
-          'pd': {
-            'name': process_dispatcher,
-          },
-          'logging': {
-            'loggers': {
-              'eeagent': {
-                'level': 'DEBUG',
-                'handlers': ['file', 'console']
-              }
+            'dashi': {
             },
-            'root': {
-              'handlers': ['file', 'console']
+            'eeagent': {
+                'name': name,
+                'slots': slots,
+                'heartbeat': heartbeat,
+                'node_id': node_name,
+                'launch_type': {
+                    'name': launch_type,
+                    'supd_directory': supd_directory,
+                    'container_args': container_args,
+                    'pyon_directory': pyon_directory
+                },
             },
-            'handlers': {
-              'file': {
-                'filename': logfile,
-              }
+            'pd': {
+                'name': process_dispatcher,
+            },
+            'logging': {
+                'loggers': {
+                    'eeagent': {
+                        'level': 'DEBUG',
+                        'handlers': ['file', 'console']
+                    }
+                },
+                'root': {
+                    'handlers': ['file', 'console']
+                },
+                'handlers': {
+                    'file': {
+                        'filename': logfile,
+                    }
+                }
             }
-          }
         }
         config['server']['amqp']['exchange'] = exchange
 
@@ -919,11 +923,11 @@ class EPUHarness(object):
             'ion': '0.0.1',
             'apps': [
                 {
-                'name': name,
-                'version': '0.1',
-                'description': "%s started by epuharness" % name,
-                'processapp': [name, module, cls],
-                'config': config
+                    'name': name,
+                    'version': '0.1',
+                    'description': "%s started by epuharness" % name,
+                    'processapp': [name, module, cls],
+                    'config': config
                 }
             ]
 
@@ -957,7 +961,7 @@ def dict_merge(a, b):
 
     >>> a = {'a': 1, 'b': {1: 1, 2: 2}, 'd': 6}
     >>> b = {'c': 3, 'b': {2: 7}, 'd': {'z': [1, 2, 3]}}
-    >>> c = merge(a, b)
+    >>> c = dict_merge(a, b)
     >>> from pprint import pprint; pprint(c)
     {'a': 1, 'b': {1: 1, 2: 7}, 'c': 3, 'd': {'z': [1, 2, 3]}}
     """
