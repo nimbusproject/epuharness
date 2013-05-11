@@ -24,6 +24,10 @@ log = logging.getLogger(__name__)
 ADVERTISE_RETRIES = 10
 
 
+def complainy_on_error(function, path, excinfo):
+    print >>sys.stderr, "%s couldn't delete %s because: %s" % (function, path, excinfo)
+
+
 class EPUHarness(object):
     """EPUHarness. Sets up Process Dispatchers and EEAgents for testing.
     """
@@ -134,7 +138,7 @@ class EPUHarness(object):
 
             self.factory.terminate()
             if remove_dir:
-                shutil.rmtree(self.pidantic_dir)
+                shutil.rmtree(self.pidantic_dir, ignore_errors=False, onerror=complainy_on_error)
 
         self.dashi.cancel()
         self.dashi.disconnect()
@@ -160,7 +164,7 @@ class EPUHarness(object):
                         cfg = yaml.load(cf)
                         try:
                             persistence = cfg['apps'][0]['config']['eeagent']['launch_type']['persistence_directory']
-                            shutil.rmtree(persistence)
+                            shutil.rmtree(persistence, ignore_errors=False, onerror=complainy_on_error)
                         except Exception:
                             pass
                     os.remove(config)
