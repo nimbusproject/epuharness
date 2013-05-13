@@ -28,6 +28,13 @@ def complainy_on_error(function, path, excinfo):
     print >>sys.stderr, "%s couldn't delete %s because: %s" % (function, path, excinfo)
 
 
+def careful_rmtree(directory):
+    try:
+        shutil.rmtree(directory)
+    except Exception:
+        shutil.rmtree(directory, ignore_errors=False, onerror=complainy_on_error)
+
+
 class EPUHarness(object):
     """EPUHarness. Sets up Process Dispatchers and EEAgents for testing.
     """
@@ -138,7 +145,7 @@ class EPUHarness(object):
 
             self.factory.terminate()
             if remove_dir:
-                shutil.rmtree(self.pidantic_dir, ignore_errors=False, onerror=complainy_on_error)
+                careful_rmtree(self.pidantic_dir)
 
         self.dashi.cancel()
         self.dashi.disconnect()
@@ -164,7 +171,7 @@ class EPUHarness(object):
                         cfg = yaml.load(cf)
                         try:
                             persistence = cfg['apps'][0]['config']['eeagent']['launch_type']['persistence_directory']
-                            shutil.rmtree(persistence, ignore_errors=False, onerror=complainy_on_error)
+                            careful_rmtree(persistence)
                         except Exception:
                             pass
                     os.remove(config)
