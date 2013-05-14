@@ -143,7 +143,11 @@ class EPUHarness(object):
                 except Exception:
                     log.exception("Problem saving logs. Proceeding.")
 
-            self.factory.terminate()
+            try:
+                self.factory.terminate()
+            except Exception as e:
+                log.warning("Problem terminating factory, continuing : %s" % e)
+
             if remove_dir:
                 careful_rmtree(self.pidantic_dir)
 
@@ -179,7 +183,7 @@ class EPUHarness(object):
             # Perhaps instance internals have changed
             log.warning("Couldn't delete temporary config files: %s" % e)
 
-    def start(self, deployment_file=None, deployment_str=None):
+    def start(self, deployment_file=None, deployment_str=None, remove_old_persistence=True):
         """Start services defined in the deployment file provided. If a
         deployment file isn't provided, then start a standard set of one
         Process Dispatcher and one eeagent.
@@ -192,9 +196,31 @@ class EPUHarness(object):
         try:
             os.makedirs(self.pidantic_dir)
         except OSError:
-            log.debug("Problem making pidantic dir", exc_info=True)
-            msg = "epu-harness's persistance directory %s is present. Remove it before proceeding" % self.pidantic_dir
-            raise HarnessException(msg)
+            if remove_old_persistence is True:
+                self._setup_factory()
+                instances = self.factory.reload_instances()
+
+                if len(instances) > 0:
+                    if len(instances) == 1:
+                        verb = "is"
+                    else:
+                        verb = "are"
+                    msg = "%s %s running, please stop epu-harness before continuing " % (
+                        ", ".join(instances), verb
+                    )
+                    raise HarnessException(msg)
+                else:
+                    msg = "Persistence directory %s exists, but there are no processes. Deleting it." % (
+                        self.pidantic_dir)
+                    log.error(msg)
+                    careful_rmtree(self.pidantic_dir)
+                    self.factory = None
+                    os.makedirs(self.pidantic_dir)
+            else:
+                log.debug("Problem making pidantic dir", exc_info=True)
+                msg = "epu-harness's persistance directory %s is present. Remove it before proceeding" % (
+                    self.pidantic_dir)
+                raise HarnessException(msg)
 
         self._setup_factory()
 
