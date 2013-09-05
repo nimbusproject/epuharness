@@ -25,7 +25,9 @@ provisioners:
     config:
       provisioner:
         default_user: default
-        dtrs: epu.localdtrs.LocalDTRS
+dt_registries:
+  dtrs:
+    config: {}
 epums:
   epum_0:
     config:

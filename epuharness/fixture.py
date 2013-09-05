@@ -135,13 +135,16 @@ class TestFixture(object):
                 msg = "Wasn't able to call %s.%s" % fn_to_block_on.__name__
             assert False, msg
 
-    def make_fake_libcloud_site(self, site_name="ec2-fake"):
+    def make_fake_libcloud_site(self, site_name="ec2-fake", needs_elastic_ip=None):
         """makes a fake libcloud site and driver.
 
         Returns tuple of the site definition, and a libcloud driver instance
         """
         if self.libcloud_drivers is None:
             self.libcloud_drivers = {}
+
+        if needs_elastic_ip is None:
+            needs_elastic_ip = False
 
         if site_name in self.libcloud_drivers:
             driver = self.libcloud_drivers[site_name]
@@ -156,7 +159,8 @@ class TestFixture(object):
 
         fake_site = {
             'type': 'mock-ec2',
-            'sqlite_db': driver.sqlite_db
+            'sqlite_db': driver.sqlite_db,
+            'needs_elastic_ip': needs_elastic_ip
         }
 
         return fake_site, driver
