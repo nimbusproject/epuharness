@@ -280,6 +280,11 @@ class EPUHarness(object):
         for pd_name, pd in self.pyon_process_dispatchers.iteritems():
             self._start_pyon_process_dispatcher(pd_name, pd.get('config', {}))
 
+        # Start Pyon Gateway
+        self.pyon_http_gateways = deployment.get('pyon-http-gateways', {})
+        for gateway_name, gateway in self.pyon_http_gateways.iteritems():
+            self._start_pyon_http_gateway(gateway_name, gateway.get('config', {}))
+
         # Start Pyon Nodes and EEAgents
         pyon_nodes = deployment.get('pyon-nodes', {})
         for node_name, node in pyon_nodes.iteritems():
@@ -860,6 +865,25 @@ class EPUHarness(object):
                 wait_time = i * i  # Exponentially increasing wait
                 log.warning("PD '%s' not available yet. Waiting %ss" % (process_dispatcher, wait_time))
                 time.sleep(2 ** i)
+
+    def _start_pyon_http_gateway(self, name=None, config=None):
+        if name is None:
+            name = 'gateway'
+        if config is None:
+            config = {}
+        gateway_module = 'ion.services.coi.service_gateway_service'
+        gateway_class = 'ServiceGatewayService'
+
+        log.info("Starting Pyon HTTP Gateway %s" % name)
+
+        updated_config = self._build_pyon_pd_config(config)
+
+        pyon_directory = updated_config.get('pyon_directory')
+        sysname = updated_config.get('system', {}).get('name')
+
+        self._start_rel(name=name, module=gateway_module, cls=gateway_class,
+                config=updated_config, pyon_directory=pyon_directory,
+                sysname=sysname)
 
     def _start_pyon_process_dispatcher(self, name=None, config=None):
         if name is None:
