@@ -42,7 +42,7 @@ setupdict['dependency_links'] = [
     'https://github.com/nimbusproject/pidantic/tarball/master#egg=pidantic-0.2',
     'https://github.com/ooici/eeagent/tarball/master#egg=eeagent-0.2',
     'https://github.com/nimbusproject/ceiclient/tarball/master#egg=ceiclient-0.2',
-    'https://github.com/oldpatricka/libcloud/tarball/LIBCLOUD-417#egg=apache-libcloud-0.14.0-dev',
+    'https://github.com/apache/libcloud/tarball/trunk#egg=apache-libcloud-0.14.0-dev',
     'http://sddevrepo.oceanobservatories.org/releases',
     ]
 setupdict['test_suite'] = 'epuharness'
