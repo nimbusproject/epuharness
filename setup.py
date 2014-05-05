@@ -19,7 +19,6 @@ setupdict = {
     'version' : version,
     'description' : 'OOICI CEI Elastic Processing Unit Test Harness',
     'url': 'https://confluence.oceanobservatories.org/display/CIDev/Common+Execution+Infrastructure+Development',
-    'download_url' : 'http://sddevrepo.oceanobservatories.org/releases',
     'license' : 'Apache 2.0',
     'author' : 'CEI',
     'author_email' : 'patricka@uvic.ca',
