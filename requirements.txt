@@ -11,7 +11,7 @@ dashi==0.2.1
 -e git+git://github.com/nimbusproject/epuharness.git#egg=epuharness
 gevent==0.13.6
 greenlet==0.3.4
-httplib2==0.7.1
+httplib2==0.18.0
 kombu==2.1.8
 mock==0.8.0
 nimboss==0.4.6
